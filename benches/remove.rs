@@ -9,7 +9,7 @@ fn remove() {
 
         let weight = 1.;
 
-        for i in 0..9999 {
+        for i in 5..999_999 {
             let index = graph.add_vertex();
 
             'inner: for j in -5..5 {
