@@ -9,6 +9,7 @@ use ghost::{GhostCell, GhostToken, InvariantLifetime};
 
 type Cell<'a, 'id> = GhostCell<'id, Vertex<'a, 'id>>;
 
+/// An edge between two [vertices](Vertex), with a given weight
 #[derive(Debug, Clone)]
 pub struct Edge<'a, 'id>(f64, Rc<Cell<'a, 'id>>, Rc<Cell<'a, 'id>>);
 
@@ -25,6 +26,9 @@ impl<'a, 'id> Edge<'a, 'id> {
         first.ghost_borrow_mut(token).edges.insert(id, edge.clone());
         second.ghost_borrow_mut(token).edges.insert(id, edge);
     }
+    /// Returns the other [`Vertex`] in `self`, returning `None`
+    /// if the provided [`Id`] doesn't relate to either [`Vertex`]
+    /// in `self`
     pub fn other<'new_id>(
         &'new_id self,
         id: Id<'id>,
@@ -40,6 +44,8 @@ impl<'a, 'id> Edge<'a, 'id> {
     }
 }
 
+/// Represents a vertex in a graph-holds no data itself, and is only
+/// useful in relation to other vertices
 #[derive(Debug)]
 pub struct Vertex<'a, 'id> {
     id: usize,
@@ -47,7 +53,7 @@ pub struct Vertex<'a, 'id> {
 }
 
 impl<'a, 'id> Vertex<'a, 'id> {
-    /// Creates a new [`Vertex`] with the given id
+    /// Creates a new [`Vertex`] with the given `id`
     #[must_use]
     pub fn new(id: usize) -> Self {
         Self {
@@ -55,14 +61,14 @@ impl<'a, 'id> Vertex<'a, 'id> {
             edges: HashMap::new(),
         }
     }
-    /// Returns a slice of all the vertice's edges
+    /// Returns an iterator over all the vertice's edges
     #[must_use]
     pub fn edges(&self) -> std::collections::hash_map::Iter<'_, Id<'id>, Edge<'a, 'id>> {
         self.edges.iter()
     }
 }
 
-/// The overall graph, just a container for vertices
+/// The overall graph, just a container for [`vertices`](Vertex)
 pub struct Graph<'a, 'id> {
     vertices: HashMap<Id<'id>, Rc<Cell<'a, 'id>>>,
     current_id: usize,
@@ -88,10 +94,11 @@ impl<'a, 'id> Graph<'a, 'id> {
         self.vertices.insert(id, vertex);
         id
     }
+    /// Empties self
     pub fn clear<'new_id>(&mut self, token: &'new_id mut GhostToken<'id>) {
         let mut seq = self.vertices.keys().cloned().collect::<Vec<_>>();
         while let Some(index) = seq.pop() {
-            self.remove(index, token);
+            self.remove(index, token).unwrap();
         }
     }
     /// Adds an edge between the `first_index` and the `second_index`
@@ -138,14 +145,17 @@ impl<'a, 'id> Graph<'a, 'id> {
 
         Ok(())
     }
+    /// The number of [vertices](Vertex) in the graph
     #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
+    /// If there are no [vertices](Vertex) in the graph
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
+    /// Gets a new id for a new [`Vertex`] or [`Edge`]
     fn new_id(&mut self) -> Id<'id> {
         let id = Id::new(self.current_id);
         self.current_id += 1;
@@ -156,8 +166,17 @@ impl<'a, 'id> Graph<'a, 'id> {
     pub fn get<'new_id>(&'new_id self, index: Id<'id>) -> Option<&'new_id Rc<Cell<'a, 'id>>> {
         self.vertices.get(&index)
     }
-    pub fn remove(&mut self, index: Id<'id>, token: &mut GhostToken<'id>) -> Option<()> {
-        let to_remove = self.vertices.remove(&index)?;
+    /// Attempts to remove a [`Vertex`] from the graph, removing all [`edges`](Edge) from and
+    /// to the [`Vertex`]
+    pub fn remove(
+        &mut self,
+        index: Id<'id>,
+        token: &mut GhostToken<'id>,
+    ) -> Result<(), GraphError<'id>> {
+        let to_remove = self
+            .vertices
+            .remove(&index)
+            .ok_or(GraphError::IdenticalVertex(index))?;
 
         let mut seq = to_remove
             .ghost_borrow_mut(token)
@@ -173,7 +192,7 @@ impl<'a, 'id> Graph<'a, 'id> {
             other.ghost_borrow_mut(token).edges.remove(&id).unwrap();
         }
 
-        Some(())
+        Ok(())
     }
 }
 

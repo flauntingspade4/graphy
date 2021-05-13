@@ -35,7 +35,7 @@ fn add_many() {
 
 #[test]
 fn add_edge() {
-    GhostToken::new(|mut token| {
+    GhostToken::new(|mut t| {
         let mut graph = Graph::new();
 
         let first = graph.add_vertex();
@@ -46,19 +46,13 @@ fn add_edge() {
 
         let weight = 1.;
 
-        graph
-            .add_edge(first, second, weight, &mut token)
-            .unwrap();
+        graph.add_edge(first, second, weight, &mut t).unwrap();
 
-        graph
-            .add_edge(second, third, weight, &mut token)
-            .unwrap();
+        graph.add_edge(second, third, weight, &mut t).unwrap();
 
-        let vertex = graph.get(second).unwrap();
-
-        let vertex = vertex.ghost_borrow(&token);
-
-        println!("{:?}", vertex.edges());
+        assert_eq!(graph.get(first).unwrap().ghost_borrow(&t).edges().len(), 1);
+        assert_eq!(graph.get(second).unwrap().ghost_borrow(&t).edges().len(), 2);
+        assert_eq!(graph.get(third).unwrap().ghost_borrow(&t).edges().len(), 1);
     });
 }
 
