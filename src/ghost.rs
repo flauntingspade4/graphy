@@ -1,7 +1,7 @@
 use std::{cell::UnsafeCell, marker::PhantomData};
 
-#[derive(Clone, Copy, Default, Debug)]
-struct InvariantLifetime<'id>(PhantomData<*mut &'id ()>);
+#[derive(Clone, Copy, Default, Debug, Hash)]
+pub(crate) struct InvariantLifetime<'id>(PhantomData<*mut &'id ()>);
 
 impl<'id> InvariantLifetime<'id> {
     pub const fn new() -> Self {
@@ -41,10 +41,10 @@ impl<'id, T> GhostCell<'id, T> {
     pub fn get_mut(&mut self) -> &mut T {
         self.value.get_mut()
     }
-    pub const fn borrow<'a>(&'a self, _token: &'a GhostToken<'id>) -> &T {
+    pub const fn ghost_borrow<'a>(&'a self, _token: &'a GhostToken<'id>) -> &T {
         unsafe { &*self.value.get() }
     }
-    pub const fn borrow_mut<'a>(&'a self, _token: &'a mut GhostToken<'id>) -> &mut T {
+    pub const fn ghost_borrow_mut<'a>(&'a self, _token: &'a mut GhostToken<'id>) -> &mut T {
         unsafe { &mut *self.value.get() }
     }
 }

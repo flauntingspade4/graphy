@@ -3,90 +3,110 @@
 
 pub mod ghost;
 
-use ghost::{GhostCell, GhostToken};
+use std::{collections::HashMap, rc::Rc};
 
-#[derive(Debug)]
-pub struct Edge<'a, 'id>(
-    f64,
-    &'a GhostCell<'id, Vertex<'a, 'id>>,
-    &'a GhostCell<'id, Vertex<'a, 'id>>,
-);
+use ghost::{GhostCell, GhostToken, InvariantLifetime};
+
+type Cell<'a, 'id> = GhostCell<'id, Vertex<'a, 'id>>;
+
+#[derive(Debug, Clone)]
+pub struct Edge<'a, 'id>(f64, Rc<Cell<'a, 'id>>, Rc<Cell<'a, 'id>>);
 
 impl<'a, 'id> Edge<'a, 'id> {
-    #[must_use]
-    pub const fn new(
+    fn add_edge<'new_id>(
         weight: f64,
-        first: &'a GhostCell<'id, Vertex<'a, 'id>>,
-        second: &'a GhostCell<'id, Vertex<'a, 'id>>,
-    ) -> Self {
-        Self(weight, first, second)
+        first: &Rc<Cell<'a, 'id>>,
+        second: &Rc<Cell<'a, 'id>>,
+        id: Id<'id>,
+        token: &'new_id mut GhostToken<'id>,
+    ) {
+        let edge = Self(weight, first.clone(), second.clone());
+
+        first.ghost_borrow_mut(token).edges.insert(id, edge.clone());
+        second.ghost_borrow_mut(token).edges.insert(id, edge);
+    }
+    pub fn other<'new_id>(
+        &'new_id self,
+        id: Id<'id>,
+        token: &'new_id GhostToken<'id>,
+    ) -> Option<&Rc<Cell<'a, 'id>>> {
+        if id.id == self.1.ghost_borrow(token).id {
+            Some(&self.2)
+        } else if id.id == self.2.ghost_borrow(token).id {
+            Some(&self.1)
+        } else {
+            None
+        }
     }
 }
 
 #[derive(Debug)]
 pub struct Vertex<'a, 'id> {
     id: usize,
-    edges: Vec<Edge<'a, 'id>>,
+    edges: HashMap<Id<'id>, Edge<'a, 'id>>,
 }
 
 impl<'a, 'id> Vertex<'a, 'id> {
+    /// Creates a new [`Vertex`] with the given id
     #[must_use]
-    pub const fn new(id: usize) -> Self {
+    pub fn new(id: usize) -> Self {
         Self {
             id,
-            edges: Vec::new(),
+            edges: HashMap::new(),
         }
     }
-    pub fn add_edge(
-        first: &'a GhostCell<'id, Vertex<'a, 'id>>,
-        second: &'a GhostCell<'id, Vertex<'a, 'id>>,
-        weight: f64,
-        token: &'a mut GhostToken<'id>,
-    ) {
-        let edge = Edge::new(weight, first, second);
-        first.borrow_mut(token).edges.push(edge);
-        let edge = Edge::new(weight, first, second);
-        second.borrow_mut(token).edges.push(edge);
-    }
+    /// Returns a slice of all the vertice's edges
     #[must_use]
-    pub fn neighbors(&self) -> &[Edge<'a, 'id>] {
-        &self.edges
+    pub fn edges(&self) -> std::collections::hash_map::Iter<'_, Id<'id>, Edge<'a, 'id>> {
+        self.edges.iter()
     }
 }
 
+/// The overall graph, just a container for vertices
 pub struct Graph<'a, 'id> {
-    vertices: Vec<GhostCell<'id, Vertex<'a, 'id>>>,
+    vertices: HashMap<Id<'id>, Rc<Cell<'a, 'id>>>,
     current_id: usize,
     len: usize,
 }
 
 impl<'a, 'id> Graph<'a, 'id> {
+    /// Constructs a new empty graph
     #[must_use]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            vertices: Vec::new(),
+            vertices: HashMap::new(),
             current_id: 0,
             len: 0,
         }
     }
-    pub fn add_vertex(&mut self) -> usize {
-        let vertex = GhostCell::new(Vertex::new(self.current_id));
-        self.vertices.push(vertex);
-        self.current_id += 1;
+    /// Adds a vertex with no edges, and returns the id of the
+    /// created vertex
+    pub fn add_vertex(&mut self) -> Id<'id> {
+        let vertex = Rc::new(GhostCell::new(Vertex::new(self.current_id)));
+        let id = self.new_id();
         self.len += 1;
-        self.current_id - 1
+        self.vertices.insert(id, vertex);
+        id
     }
+    pub fn clear<'new_id>(&mut self, token: &'new_id mut GhostToken<'id>) {
+        let mut seq = self.vertices.keys().cloned().collect::<Vec<_>>();
+        while let Some(index) = seq.pop() {
+            self.remove(index, token);
+        }
+    }
+    /// Adds an edge between the `first_index` and the `second_index`
+    /// with weight `weight`
     /// # Errors
-    /// If first_index is the same as second_index, or either
+    /// If `first_index` is the same as `second_index`, or either
     /// index doesn't exist within the graph, a `GraphError` will
     /// be returned
-    pub fn add_edge(
-        &'a mut self,
-        first_index: usize,
-        second_index: usize,
+    pub fn add_edge<'new_id>(
+        &'new_id mut self,
+        first_index: Id<'id>,
+        second_index: Id<'id>,
         weight: f64,
-        token: &'a mut GhostToken<'id>,
-    ) -> Result<(), GraphError> {
+        token: &'new_id mut GhostToken<'id>,
+    ) -> Result<(), GraphError<'id>> {
         if first_index == second_index {
             return Err(GraphError::IdenticalVertex(first_index));
         }
@@ -94,29 +114,27 @@ impl<'a, 'id> Graph<'a, 'id> {
         let mut first_vertex = Err(GraphError::VertexNotFound(first_index));
         let mut second_vertex = Err(GraphError::VertexNotFound(second_index));
 
-        for vertex in &self.vertices {
-            let id = vertex.borrow(token).id;
-
-            if id == first_index {
-                first_vertex = Ok(vertex);
+        for (id, vertex) in &self.vertices {
+            if *id == first_index {
+                first_vertex = Ok(vertex.clone());
                 if first_vertex.is_ok() && second_vertex.is_ok() {
                     break;
                 }
-            } else if id == second_index {
-                second_vertex = Ok(vertex);
+            } else if *id == second_index {
+                second_vertex = Ok(vertex.clone());
                 if first_vertex.is_ok() && second_vertex.is_ok() {
                     break;
                 }
             }
         }
 
+        // Either will fail if the vertex is not found
         let first = first_vertex?;
         let second = second_vertex?;
 
-        let edge = Edge::new(weight, first, second);
-        first.borrow_mut(token).edges.push(edge);
-        let edge = Edge::new(weight, first, second);
-        second.borrow_mut(token).edges.push(edge);
+        let id = self.new_id();
+
+        Edge::add_edge(weight, &first, &second, id, token);
 
         Ok(())
     }
@@ -128,23 +146,75 @@ impl<'a, 'id> Graph<'a, 'id> {
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
-    pub fn get(
-        &'a self,
-        index: usize,
-        token: &'a GhostToken<'id>,
-    ) -> Option<&GhostCell<'id, Vertex<'a, 'id>>> {
-        match self
-            .vertices
-            .binary_search_by(|vertex| vertex.borrow(token).id.cmp(&index))
-        {
-            Ok(i) => Some(&self.vertices[i]),
-            Err(_) => None,
+    fn new_id(&mut self) -> Id<'id> {
+        let id = Id::new(self.current_id);
+        self.current_id += 1;
+        id
+    }
+    /// Attempts to get a vertice using a given [`Id`]
+    #[must_use]
+    pub fn get<'new_id>(&'new_id self, index: Id<'id>) -> Option<&'new_id Rc<Cell<'a, 'id>>> {
+        self.vertices.get(&index)
+    }
+    pub fn remove(&mut self, index: Id<'id>, token: &mut GhostToken<'id>) -> Option<()> {
+        let to_remove = self.vertices.remove(&index)?;
+
+        let mut seq = to_remove
+            .ghost_borrow_mut(token)
+            .edges
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        while let Some(id) = seq.pop() {
+            let edge = to_remove.ghost_borrow_mut(token).edges.remove(&id).unwrap();
+
+            let other = edge.other(index, &token).unwrap().clone();
+            other.ghost_borrow_mut(token).edges.remove(&id).unwrap();
         }
+
+        Some(())
     }
 }
 
 #[derive(Debug)]
-pub enum GraphError {
-    VertexNotFound(usize),
-    IdenticalVertex(usize),
+pub enum GraphError<'id> {
+    VertexNotFound(Id<'id>),
+    IdenticalVertex(Id<'id>),
+}
+
+/// The type describing a [`Vertex`] within a [`Graph`]
+#[derive(Clone, Copy, Hash)]
+pub struct Id<'id> {
+    id: usize,
+    _marker: InvariantLifetime<'id>,
+}
+
+impl<'id> Id<'id> {
+    /// Constructs a new [`Id`] with a given id
+    #[must_use]
+    pub const fn new(id: usize) -> Self {
+        Self {
+            id,
+            _marker: InvariantLifetime::new(),
+        }
+    }
+    #[must_use]
+    pub const fn id(self) -> usize {
+        self.id
+    }
+}
+
+impl<'id> PartialEq for Id<'id> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id.eq(&other.id)
+    }
+}
+
+impl<'id> Eq for Id<'id> {}
+
+impl<'id> core::fmt::Debug for Id<'id> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id)
+    }
 }
