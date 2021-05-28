@@ -4,52 +4,18 @@
 pub mod edge;
 pub mod ghost;
 mod id;
+mod vertex;
 
-use std::{collections::HashMap, marker::PhantomData, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use ghost::{GhostCell, GhostToken};
 
 use edge::EdgeTrait;
 use id::EdgeId;
 pub use id::VertexId;
+pub use vertex::Vertex;
 
 type Node<'id, Item, Weight, Edge> = GhostCell<'id, Vertex<'id, Item, Weight, Edge>>;
-
-/// Represents a vertex in a graph. Vertexes holds no data,
-/// and is only useful in relation to other vertices
-#[derive(Debug)]
-pub struct Vertex<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
-    id: VertexId<'id>,
-    edges: HashMap<EdgeId<'id>, Edge>,
-    item: Item,
-    _phantom: &'id PhantomData<Weight>,
-}
-
-impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, Weight, Edge> {
-    /// Creates a new [`Vertex`] with the given `id`
-    #[must_use]
-    fn new(id: usize, item: Item) -> Self {
-        Self {
-            id: VertexId::new(id),
-            edges: HashMap::new(),
-            item,
-            _phantom: &PhantomData,
-        }
-    }
-    /// Returns an iterator over all the vertice's edges
-    #[must_use]
-    pub fn edges(&self) -> std::collections::hash_map::Iter<'_, EdgeId<'id>, Edge> {
-        self.edges.iter()
-    }
-    /// Gets a reference to `self`'s inner item
-    pub fn get_item(&self) -> &Item {
-        &self.item
-    }
-    /// Gets a mutable reference to `self`'s inner item
-    pub fn get_item_mut(&mut self) -> &mut Item {
-        &mut self.item
-    }
-}
 
 /// The overall graph, just a container for [`vertices`](Vertex)
 pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
