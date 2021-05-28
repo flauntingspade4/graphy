@@ -13,21 +13,19 @@ use edge::EdgeTrait;
 use id::EdgeId;
 pub use id::VertexId;
 
-type Node<'a, 'id, Item, Weight, Edge> = GhostCell<'id, Vertex<'a, 'id, Item, Weight, Edge>>;
+type Node<'id, Item, Weight, Edge> = GhostCell<'id, Vertex<'id, Item, Weight, Edge>>;
 
 /// Represents a vertex in a graph. Vertexes holds no data,
 /// and is only useful in relation to other vertices
 #[derive(Debug)]
-pub struct Vertex<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>> {
+pub struct Vertex<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
     id: VertexId<'id>,
     edges: HashMap<EdgeId<'id>, Edge>,
     item: Item,
-    _phantom: &'a PhantomData<Weight>,
+    _phantom: &'id PhantomData<Weight>,
 }
 
-impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
-    Vertex<'a, 'id, Item, Weight, Edge>
-{
+impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, Weight, Edge> {
     /// Creates a new [`Vertex`] with the given `id`
     #[must_use]
     fn new(id: usize, item: Item) -> Self {
@@ -54,24 +52,22 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
 }
 
 /// The overall graph, just a container for [`vertices`](Vertex)
-pub struct Graph<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>> {
-    vertices: HashMap<VertexId<'id>, Rc<Node<'a, 'id, Item, Weight, Edge>>>,
+pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
+    vertices: HashMap<VertexId<'id>, Rc<Node<'id, Item, Weight, Edge>>>,
     current_vertex_id: usize,
     current_edge_id: usize,
     len: usize,
 }
 
-impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>> Default
-    for Graph<'a, 'id, Item, Weight, Edge>
+impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Default
+    for Graph<'id, Item, Weight, Edge>
 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
-    Graph<'a, 'id, Item, Weight, Edge>
-{
+impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Weight, Edge> {
     /// Constructs a new empty graph
     #[must_use]
     pub fn new() -> Self {
@@ -109,12 +105,12 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
         id_one: VertexId<'id>,
         id_two: VertexId<'id>,
         weight: impl Fn(
-            &Rc<Node<'a, 'id, Item, Weight, Edge>>,
-            &Rc<Node<'a, 'id, Item, Weight, Edge>>,
+            &Rc<Node<'id, Item, Weight, Edge>>,
+            &Rc<Node<'id, Item, Weight, Edge>>,
             &mut GhostToken<'id>,
         ) -> Weight,
         token: &mut GhostToken<'id>,
-    ) -> Result<(), GraphError<'a, 'id, Item, Weight, Edge>> {
+    ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{IdenticalVertex, VertexNotFound};
 
         if id_one == id_two {
@@ -157,7 +153,7 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
     /// # Errors
     /// Returns `None` if `id` does not exist within the graph
     #[must_use]
-    pub fn get(&self, id: VertexId<'id>) -> Option<&Rc<Node<'a, 'id, Item, Weight, Edge>>> {
+    pub fn get(&self, id: VertexId<'id>) -> Option<&Rc<Node<'id, Item, Weight, Edge>>> {
         self.vertices.get(&id)
     }
     /// Returns an immutable iterator over the
@@ -165,7 +161,7 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
     #[must_use]
     pub fn vertices(
         &self,
-    ) -> std::collections::hash_map::Iter<'_, VertexId<'id>, Rc<Node<'a, 'id, Item, Weight, Edge>>>
+    ) -> std::collections::hash_map::Iter<'_, VertexId<'id>, Rc<Node<'id, Item, Weight, Edge>>>
     {
         self.vertices.iter()
     }
@@ -174,7 +170,7 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
     #[must_use]
     pub fn vertices_mut(
         &mut self,
-    ) -> std::collections::hash_map::IterMut<'_, VertexId<'id>, Rc<Node<'a, 'id, Item, Weight, Edge>>>
+    ) -> std::collections::hash_map::IterMut<'_, VertexId<'id>, Rc<Node<'id, Item, Weight, Edge>>>
     {
         self.vertices.iter_mut()
     }
@@ -186,7 +182,7 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
         &mut self,
         id: VertexId<'id>,
         token: &mut GhostToken<'id>,
-    ) -> Result<(), GraphError<'a, 'id, Item, Weight, Edge>> {
+    ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{EdgeNotFound, VertexNotFound};
 
         let to_remove = self.vertices.remove(&id).ok_or(VertexNotFound(id))?;
@@ -251,7 +247,7 @@ impl<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>>
 }
 
 #[derive(Debug)]
-pub enum GraphError<'a, 'id, Item, Weight, Edge: EdgeTrait<'a, 'id, Item, Weight>> {
+pub enum GraphError<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
     EdgeNotFound(EdgeId<'id>),
     VertexNotFound(VertexId<'id>),
     IdenticalVertex(VertexId<'id>),

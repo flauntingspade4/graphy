@@ -12,7 +12,7 @@ pub use undirected_weighted::UnDirectedWeightedEdge;
 
 /// A graph can add edges between [`Vertices`](crate::Vertex) of any
 /// type that implements [`EdgeTrait`]
-pub trait EdgeTrait<'a, 'id, Item, Weight>: Sized {
+pub trait EdgeTrait<'id, Item, Weight>: Sized {
     type Error;
 
     /// Adds an edge between `first` and `second`,
@@ -22,8 +22,8 @@ pub trait EdgeTrait<'a, 'id, Item, Weight>: Sized {
     /// fails
     fn add_edge<'new_id>(
         weight: Weight,
-        first: &Rc<Node<'a, 'id, Item, Weight, Self>>,
-        second: &Rc<Node<'a, 'id, Item, Weight, Self>>,
+        first: &Rc<Node<'id, Item, Weight, Self>>,
+        second: &Rc<Node<'id, Item, Weight, Self>>,
         id: EdgeId<'id>,
         token: &'new_id mut GhostToken<'id>,
     ) -> Result<(), Self::Error>;
@@ -35,5 +35,5 @@ pub trait EdgeTrait<'a, 'id, Item, Weight>: Sized {
         &'new_id self,
         id: VertexId<'id>,
         token: &'new_id GhostToken<'id>,
-    ) -> Option<&Rc<Node<'a, 'id, Item, Weight, Self>>>;
+    ) -> Option<&Rc<Node<'id, Item, Weight, Self>>>;
 }
