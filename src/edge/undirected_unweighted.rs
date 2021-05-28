@@ -4,7 +4,10 @@ use crate::{edge::EdgeTrait, ghost::GhostToken, id::EdgeId, Node, VertexId};
 
 /// An undirected edge between two [vertices](crate::Vertex)
 #[derive(Debug)]
-pub struct UnDirectedUnWeightedEdge<'id, Item>(Rc<Node<'id, Item, (), Self>>, Rc<Node<'id, Item, (), Self>>);
+pub struct UnDirectedUnWeightedEdge<'id, Item>(
+    Rc<Node<'id, Item, (), Self>>,
+    Rc<Node<'id, Item, (), Self>>,
+);
 
 impl<'id, Item> Clone for UnDirectedUnWeightedEdge<'id, Item> {
     fn clone(&self) -> Self {

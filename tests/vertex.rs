@@ -1,7 +1,7 @@
 use graph::{edge::UnDirectedWeightedEdge, ghost::GhostToken, Graph};
 
 #[test]
-fn make_empty() {
+fn can_get() {
     GhostToken::new(|t| {
         let mut graph: Graph<f64, (), UnDirectedWeightedEdge<f64, ()>> = Graph::new();
 

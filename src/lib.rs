@@ -6,7 +6,7 @@ pub mod ghost;
 mod id;
 mod vertex;
 
-use std::{collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
 use ghost::{GhostCell, GhostToken};
 
@@ -14,12 +14,13 @@ use edge::EdgeTrait;
 use id::EdgeId;
 pub use id::VertexId;
 pub use vertex::Vertex;
+use vertex::Vertices;
 
 type Node<'id, Item, Weight, Edge> = GhostCell<'id, Vertex<'id, Item, Weight, Edge>>;
 
 /// The overall graph, just a container for [`vertices`](Vertex)
 pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
-    vertices: HashMap<VertexId<'id>, Rc<Node<'id, Item, Weight, Edge>>>,
+    vertices: Vertices<'id, Item, Weight, Edge>,
     current_vertex_id: usize,
     current_edge_id: usize,
     len: usize,
@@ -38,7 +39,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     #[must_use]
     pub fn new() -> Self {
         Self {
-            vertices: HashMap::new(),
+            vertices: Vertices::new(),
             current_vertex_id: 0,
             current_edge_id: 0,
             len: 0,
