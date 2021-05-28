@@ -2,8 +2,9 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{VertexId, edge::EdgeTrait, id::EdgeId};
 
-/// Represents a vertex in a graph. Vertexes holds no data,
-/// and is only useful in relation to other vertices
+/// Represents a vertex in a graph. Vertices holds data,
+/// but are usually only useful in relation to other
+/// vertices
 #[derive(Debug)]
 pub struct Vertex<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
     pub(crate) id: VertexId<'id>,
