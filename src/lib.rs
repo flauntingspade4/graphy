@@ -96,6 +96,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     }
     /// Adds an edge between the `id_one` and the `id_two`
     /// with the given weight
+    /// The internal edge count will still be incremented,
+    /// even if the method fails
     /// # Errors
     /// If `id_one` is the same as `id_two`, or either
     /// id doesn't exist within the graph, a [`GraphError`] will
@@ -113,11 +115,11 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{IdenticalVertex, VertexNotFound};
 
+        let id = self.new_edge_id();
+
         if id_one == id_two {
             return Err(IdenticalVertex(id_one));
         }
-
-        let id = self.new_edge_id();
 
         let first = self.vertices.get(&id_one).ok_or(VertexNotFound(id_one))?;
 
