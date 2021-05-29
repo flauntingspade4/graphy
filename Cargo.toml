@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+hashbrown = "0.11.2"
+wee_alloc = "0.4.5"
 
 [dev-dependencies]
 rand = "*"

@@ -11,6 +11,6 @@ fn can_get() {
 
         let item = graph.get(token).unwrap();
 
-        assert_eq!(*item.g_borrow(&t).get_item(), first_item);
+        assert_eq!(*item.borrow(&t).get_item(), first_item);
     });
 }

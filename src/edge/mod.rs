@@ -3,9 +3,7 @@
 mod undirected_unweighted;
 mod undirected_weighted;
 
-use std::rc::Rc;
-
-use crate::{ghost::GhostToken, id::EdgeId, Node, VertexId};
+use crate::{ghost::GhostToken, id::EdgeId, SharedNode, VertexId};
 
 pub use undirected_unweighted::UnDirectedUnWeightedEdge;
 pub use undirected_weighted::UnDirectedWeightedEdge;
@@ -22,8 +20,8 @@ pub trait EdgeTrait<'id, Item, Weight>: Sized {
     /// fails
     fn add_edge<'new_id>(
         weight: Weight,
-        first: &Rc<Node<'id, Item, Weight, Self>>,
-        second: &Rc<Node<'id, Item, Weight, Self>>,
+        first: &SharedNode<'id, Item, Weight, Self>,
+        second: &SharedNode<'id, Item, Weight, Self>,
         id: EdgeId<'id>,
         token: &'new_id mut GhostToken<'id>,
     ) -> Result<(), Self::Error>;
@@ -35,5 +33,5 @@ pub trait EdgeTrait<'id, Item, Weight>: Sized {
         &'new_id self,
         id: VertexId<'id>,
         token: &'new_id GhostToken<'id>,
-    ) -> Option<&Rc<Node<'id, Item, Weight, Self>>>;
+    ) -> Option<&SharedNode<'id, Item, Weight, Self>>;
 }

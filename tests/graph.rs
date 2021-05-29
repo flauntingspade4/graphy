@@ -1,4 +1,4 @@
-use graph::{edge::UnDirectedWeightedEdge, ghost::GhostToken, Graph};
+use graph::{edge::UnDirectedWeightedEdge, ghost::GhostToken, Graph, ALLOCATED, DEALLOCATED};
 
 #[test]
 fn make_empty() {
@@ -15,6 +15,12 @@ fn add_one() {
 
     assert_eq!(id.id(), 0);
     assert_eq!(graph.len(), 1);
+
+    println!(
+        "{} allocated\n{} deallocated",
+        ALLOCATED.load(std::sync::atomic::Ordering::SeqCst),
+        DEALLOCATED.load(std::sync::atomic::Ordering::SeqCst)
+    );
 }
 
 #[test]
@@ -31,18 +37,24 @@ fn add_many() {
 
     assert_eq!(id.id(), x);
     assert_eq!(graph.len(), x + 1);
+
+    println!(
+        "{} allocated\n{} deallocated",
+        ALLOCATED.load(std::sync::atomic::Ordering::SeqCst),
+        DEALLOCATED.load(std::sync::atomic::Ordering::SeqCst)
+    );
 }
 
 #[test]
 fn add_edge() {
     GhostToken::new(|mut t| {
-        let mut graph: Graph<(), f64, UnDirectedWeightedEdge<_, _>> = Graph::new();
+        let mut graph: Graph<usize, f64, UnDirectedWeightedEdge<_, _>> = Graph::new();
 
-        let first = graph.add_vertex(());
+        let first = graph.add_vertex(1);
 
-        let second = graph.add_vertex(());
+        let second = graph.add_vertex(2);
 
-        let third = graph.add_vertex(());
+        let third = graph.add_vertex(3);
 
         let weight = 1.;
 
@@ -54,9 +66,9 @@ fn add_edge() {
             .add_edge(second, third, |_, _, _| weight, &mut t)
             .unwrap();
 
-        assert_eq!(graph.get(first).unwrap().g_borrow(&t).edges().len(), 1);
-        assert_eq!(graph.get(second).unwrap().g_borrow(&t).edges().len(), 2);
-        assert_eq!(graph.get(third).unwrap().g_borrow(&t).edges().len(), 1);
+        assert_eq!(graph.get(first).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get(second).unwrap().borrow(&t).iter().len(), 2);
+        assert_eq!(graph.get(third).unwrap().borrow(&t).iter().len(), 1);
     });
 }
 
@@ -83,9 +95,11 @@ fn remove() {
 
         graph.remove(second, &mut t).unwrap();
 
+        println!("This should be after!");
+
         assert!(graph.get(second).is_none());
-        assert_eq!(graph.get(first).unwrap().g_borrow(&t).edges().len(), 0);
-        assert_eq!(graph.get(third).unwrap().g_borrow(&t).edges().len(), 0);
+        assert_eq!(graph.get(first).unwrap().borrow(&t).iter().len(), 0);
+        assert_eq!(graph.get(third).unwrap().borrow(&t).iter().len(), 0);
     })
 }
 
