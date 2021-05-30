@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 
-use std::{cell::UnsafeCell, marker::PhantomData};
+use core::{cell::UnsafeCell, marker::PhantomData};
 
 #[derive(Clone, Copy, Default, Debug, Hash)]
 pub(crate) struct InvariantLifetime<'id>(PhantomData<*mut &'id ()>);

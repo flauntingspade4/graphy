@@ -1,7 +1,21 @@
 use core::ptr::NonNull;
 
+use alloc::boxed::Box;
+
 use crate::ghost::{GhostCell, GhostToken};
 
+/// A shared node, simply a wrapper around
+/// a [`NonNull`] around a [`GhostCell`] around
+/// `T`.
+///
+/// As the contents of the [`NonNull`] cannot be
+/// mutated without a mutable reference to a
+/// [`GhostToken`], it's guranteed that Rust's
+/// aliasing rules are upheld.
+///
+/// Cloning a [`Shared`] will **not** clone the
+/// internal value, and instead return a [`Shared`]
+/// with a pointer to the same value
 #[derive(Debug)]
 pub struct Shared<'id, T>(NonNull<GhostCell<'id, T>>);
 
@@ -34,7 +48,6 @@ impl<'id, T> Shared<'id, T> {
     /// There can be no other pointers to the
     /// contents of self
     pub(crate) unsafe fn drop(&self) {
-        println!("Dropping a shared, this is scary");
         core::ptr::drop_in_place(self.0.as_ptr())
     }
 }

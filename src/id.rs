@@ -55,7 +55,7 @@ impl<'id> PartialEq for VertexId<'id> {
 impl<'id> Eq for VertexId<'id> {}
 
 impl<'id> core::fmt::Debug for VertexId<'id> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.id)
     }
 }
@@ -89,7 +89,7 @@ impl<'id> PartialEq for EdgeId<'id> {
 impl<'id> Eq for EdgeId<'id> {}
 
 impl<'id> core::fmt::Debug for EdgeId<'id> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.id)
     }
 }

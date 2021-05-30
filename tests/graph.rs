@@ -1,4 +1,4 @@
-use graph::{edge::UnDirectedWeightedEdge, ghost::GhostToken, Graph, ALLOCATED, DEALLOCATED};
+use graph::{edge::UnDirectedWeightedEdge, ghost::GhostToken, Graph};
 
 #[test]
 fn make_empty() {
@@ -15,12 +15,6 @@ fn add_one() {
 
     assert_eq!(id.id(), 0);
     assert_eq!(graph.len(), 1);
-
-    println!(
-        "{} allocated\n{} deallocated",
-        ALLOCATED.load(std::sync::atomic::Ordering::SeqCst),
-        DEALLOCATED.load(std::sync::atomic::Ordering::SeqCst)
-    );
 }
 
 #[test]
@@ -37,12 +31,6 @@ fn add_many() {
 
     assert_eq!(id.id(), x);
     assert_eq!(graph.len(), x + 1);
-
-    println!(
-        "{} allocated\n{} deallocated",
-        ALLOCATED.load(std::sync::atomic::Ordering::SeqCst),
-        DEALLOCATED.load(std::sync::atomic::Ordering::SeqCst)
-    );
 }
 
 #[test]
@@ -94,8 +82,6 @@ fn remove() {
             .unwrap();
 
         graph.remove(second, &mut t).unwrap();
-
-        println!("This should be after!");
 
         assert!(graph.get(second).is_none());
         assert_eq!(graph.get(first).unwrap().borrow(&t).iter().len(), 0);

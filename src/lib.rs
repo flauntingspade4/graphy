@@ -3,52 +3,16 @@
     const_raw_ptr_deref,
     const_mut_refs,
     option_result_unwrap_unchecked,
-    allocator_api
 )]
+#![no_std]
+
+extern crate alloc;
 
 pub mod edge;
 pub mod ghost;
 mod id;
 mod shared;
 mod vertex;
-
-pub static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-pub static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
-
-struct MyAllocator(WeeAlloc<'static>);
-
-impl MyAllocator {
-    pub const fn new() -> Self {
-        Self(WeeAlloc::INIT)
-    }
-}
-
-unsafe impl GlobalAlloc for MyAllocator {
-    unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
-        ALLOCATED.fetch_add(layout.size(), std::sync::atomic::Ordering::SeqCst);
-        self.0.alloc(layout)
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: std::alloc::Layout) {
-        DEALLOCATED.fetch_add(layout.size(), std::sync::atomic::Ordering::SeqCst);
-        self.0.dealloc(ptr, layout);
-    }
-}
-
-impl Drop for MyAllocator {
-    fn drop(&mut self) {
-        println!(
-            "{} allocated\n{} deallocated",
-            ALLOCATED.load(std::sync::atomic::Ordering::SeqCst),
-            DEALLOCATED.load(std::sync::atomic::Ordering::SeqCst)
-        );
-    }
-}
-
-#[global_allocator]
-static ALLOCATOR: MyAllocator = MyAllocator::new();
-
-use std::{alloc::GlobalAlloc, sync::atomic::AtomicUsize};
 
 use ghost::{GhostCell, GhostToken};
 
@@ -57,15 +21,15 @@ use id::EdgeId;
 pub use id::VertexId;
 pub use shared::Shared;
 pub use vertex::Vertex;
-use vertex::Vertices;
-use wee_alloc::WeeAlloc;
+
+use hashbrown::HashMap;
 
 type SharedNode<'id, Item, Weight, Edge> = Shared<'id, Vertex<'id, Item, Weight, Edge>>;
 type Node<'id, Item, Weight, Edge> = GhostCell<'id, Vertex<'id, Item, Weight, Edge>>;
 
 /// The overall graph, just a container for [`vertices`](Vertex)
 pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
-    vertices: Vertices<'id, Item, Weight, Edge>,
+    vertices: HashMap<VertexId<'id>, SharedNode<'id, Item, Weight, Edge>>,
     current_vertex_id: usize,
     current_edge_id: usize,
     len: usize,
@@ -87,13 +51,12 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Drop
     }
 }
 
-
 impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Weight, Edge> {
     /// Constructs a new empty graph
     #[must_use]
     pub fn new() -> Self {
         Self {
-            vertices: Vertices::new(),
+            vertices: HashMap::new(),
             current_vertex_id: 0,
             current_edge_id: 0,
             len: 0,
@@ -105,7 +68,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         let vertex = GhostCell::new(Vertex::new(self.current_vertex_id, item));
         let id = self.new_vertex_id();
         self.len += 1;
-        self.vertices.insert(id, vertex);
+        self.vertices.insert(id, Shared::new(vertex));
         id
     }
     /// Empties self
@@ -144,9 +107,9 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             return Err(IdenticalVertex(id_one));
         }
 
-        let first = self.vertices.get(id_one).ok_or(VertexNotFound(id_one))?;
+        let first = self.vertices.get(&id_one).ok_or(VertexNotFound(id_one))?;
 
-        let second = self.vertices.get(id_two).ok_or(VertexNotFound(id_two))?;
+        let second = self.vertices.get(&id_two).ok_or(VertexNotFound(id_two))?;
 
         let weight = weight(first.ghost(), second.ghost(), token);
 
@@ -179,7 +142,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// Returns `None` if `id` does not exist within the graph
     #[must_use]
     pub fn get(&self, id: VertexId<'id>) -> Option<&SharedNode<'id, Item, Weight, Edge>> {
-        self.vertices.get(id)
+        self.vertices.get(&id)
     }
     /// Returns an immutable iterator over the
     /// graph's nodes
@@ -208,10 +171,10 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{EdgeNotFound, VertexNotFound};
 
-        let to_remove = self.vertices.remove(id).ok_or(VertexNotFound(id))?;
+        let to_remove = self.vertices.remove(&id).ok_or(VertexNotFound(id))?;
 
         let seq = to_remove.borrow(token);
-        let mut seq: Vec<EdgeId> = seq.edges().keys().copied().collect();
+        let mut seq: alloc::vec::Vec<EdgeId> = seq.edges().keys().copied().collect();
 
         // Iterate over all the edge ids in the selected
         // vertex's edges
@@ -249,9 +212,9 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         id_two: VertexId<'id>,
         token: &GhostToken<'id>,
     ) -> Option<bool> {
-        let vertex_one = self.vertices.get(id_one)?.borrow(token);
+        let vertex_one = self.vertices.get(&id_one)?.borrow(token);
 
-        if let Some(vertex_two) = self.vertices.get(id_two) {
+        if let Some(vertex_two) = self.vertices.get(&id_two) {
             let second = vertex_two.borrow(token);
             for (id, _) in vertex_one.edges() {
                 /*if edge.other(id_one, token).unwrap().g_borrow(token).id == second {
