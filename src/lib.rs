@@ -1,10 +1,22 @@
 #![warn(clippy::pedantic, clippy::nursery, clippy::all)]
-#![feature(
-    const_raw_ptr_deref,
-    const_mut_refs,
-    option_result_unwrap_unchecked,
-)]
+#![feature(const_raw_ptr_deref, const_mut_refs, option_result_unwrap_unchecked)]
 #![no_std]
+
+//! A simple and efficient graph-theory library written with a focus
+//! on error handling
+//!
+//! If you're new to this library, a good place to start is [`Graph`]
+//! to get a feel for how to add vertices and edges and then,
+//! [`GhostToken`] to understand how to actually use the library.
+//!
+//! # What are [`GhostToken`] and [`GhostCell`]?
+//!
+//! [`GhostToken`] and [`GhostCell`] are used together to ensure
+//! unique mutable ownership, or shared immutable ownership, and
+//! are part of what makes the library so fast.
+//!
+//! They are based on <http://plv.mpi-sws.org/rustbelt/ghostcell/paper.pdf>
+//!
 
 extern crate alloc;
 
@@ -28,6 +40,18 @@ type SharedNode<'id, Item, Weight, Edge> = Shared<'id, Vertex<'id, Item, Weight,
 type Node<'id, Item, Weight, Edge> = GhostCell<'id, Vertex<'id, Item, Weight, Edge>>;
 
 /// The overall graph, just a container for [`vertices`](Vertex)
+///
+/// # Types
+/// `'id` - The marker lifetime to indicate which [`GhostToken`] works
+/// with the specific graph's [`GhostToken`]s
+///
+/// `Item` - The type that each [`Vertex`] contains
+///
+/// `Weight` - The type that each edge between vertices contains
+///
+/// `Edge` - The type of edge being used, examples of which are
+/// [`UnDirectedUnWeightedEdge`](edge::UnDirectedUnWeightedEdge)
+/// and [`UnDirectedWeightedEdge`](edge::UnDirectedWeightedEdge)
 pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
     vertices: HashMap<VertexId<'id>, SharedNode<'id, Item, Weight, Edge>>,
     current_vertex_id: usize,
@@ -73,8 +97,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     }
     /// Empties self
     pub fn clear(&mut self) {
-        self.vertices.iter().for_each(|(_, s)| unsafe { s.drop() });
-        self.vertices.clear();
+        self.vertices.drain().for_each(|(_, s)| unsafe { s.drop() });
         self.current_vertex_id = 0;
         self.current_edge_id = 0;
         self.len = 0;
