@@ -2,11 +2,12 @@
 
 use crate::ghost::InvariantLifetime;
 
-/// The type describing a [`Vertex`](crate::Vertex) within a
-/// [`Graph`](crate::Graph)
+/// The type describing a [`Vertex`](crate::Vertex)'s
+/// index within a [`Graph`](crate::Graph)
+///
 /// While all vertices added in a graph are in order,
-/// removing a vertice from the graph will not change
-/// the next generated id, leading to possible errors as such
+/// removing a vertex from the graph will not change
+/// the next generated id, leading to possible errors like
 /// ```rust
 /// use graph::{edge::UnDirectedWeightedEdge, Graph, VertexId, ghost::GhostToken};
 ///
@@ -40,6 +41,7 @@ impl<'id> VertexId<'id> {
             _marker: InvariantLifetime::new(),
         }
     }
+    /// Returns the internal `id`
     #[must_use]
     pub const fn id(self) -> usize {
         self.id

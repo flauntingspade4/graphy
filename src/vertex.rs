@@ -4,7 +4,7 @@ use hashbrown::HashMap;
 
 use crate::{edge::EdgeTrait, id::EdgeId, VertexId};
 
-/// Represents a vertex in a graph. Vertices holds data,
+/// Represents a vertex in a graph. Vertices can hold data,
 /// but are usually only useful in relation to other
 /// vertices
 #[derive(Debug)]
@@ -25,12 +25,6 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, We
             item,
             _phantom: &PhantomData,
         }
-    }
-    pub(crate) fn edges(&self) -> &HashMap<EdgeId<'id>, Edge> {
-        &self.edges
-    }
-    pub(crate) fn edges_mut(&mut self) -> &mut HashMap<EdgeId<'id>, Edge> {
-        &mut self.edges
     }
     pub fn id(&self) -> VertexId<'id> {
         self.id
