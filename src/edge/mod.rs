@@ -1,11 +1,14 @@
 #![allow(clippy::module_name_repetitions)]
 
-mod undirected_unweighted;
+mod directed_weighted;
 mod undirected_weighted;
 
 use crate::{ghost::GhostToken, id::EdgeId, SharedNode, VertexId};
 
-pub use undirected_unweighted::UnDirectedUnWeightedEdge;
+pub use directed_weighted::DirectedWeightedEdge;
+/// An undirected edge between two [vertices](crate::Vertex) with
+/// no weight
+pub type UnDirectedUnWeightedEdge<'id, Item> = UnDirectedWeightedEdge<'id, Item, ()>;
 pub use undirected_weighted::UnDirectedWeightedEdge;
 
 /// A graph can add edges between [`Vertices`](crate::Vertex) of any
@@ -34,4 +37,8 @@ pub trait EdgeTrait<'id, Item, Weight>: Sized {
         id: VertexId<'id>,
         token: &'new_id GhostToken<'id>,
     ) -> Option<&SharedNode<'id, Item, Weight, Self>>;
+
+    fn get_weight(&self) -> &Weight;
+
+    fn get_weight_mut(&mut self) -> &mut Weight;
 }
