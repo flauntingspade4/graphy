@@ -50,7 +50,6 @@ impl<'id> GhostToken<'id> {
 /// Refer to [`GhostToken`]'s documentation for example
 /// usage
 #[repr(transparent)]
-#[derive(Debug)]
 pub struct GhostCell<'id, T> {
     value: UnsafeCell<T>,
     _marker: InvariantLifetime<'id>,
