@@ -137,9 +137,9 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         token: &mut GhostToken<'id>,
     ) -> Result<(), GraphError<'id, Item, Weight, Edge>>
     where
-        T: Clone,
+        Weight: Clone,
     {
-        use GraphError::{IdenticalVertex, VertexNotFound};
+        use GraphError::{AddEdgeError, IdenticalVertex, VertexNotFound};
 
         if id_one == id_two {
             Err(IdenticalVertex(id_one))
@@ -158,48 +158,33 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
 
             let mut edge_id = None;
 
-            {
-                for id in vertex_one.borrow(token).edges.keys() {
-                    if vertex_two.borrow(token).edges.contains_key(id) {
-                        edge_id = Some(*id);
-                        break;
-                    }
+            for id in vertex_one.borrow(token).edges.keys() {
+                if vertex_two.borrow(token).edges.contains_key(id) {
+                    edge_id = Some(*id);
+                    break;
                 }
             }
 
+            let ghost_one = vertex_one.ghost();
+            let ghost_two = vertex_two.ghost();
+            let weight = weight(item, ghost_one, ghost_two, self, token);
+
             match edge_id {
                 Some(id) => {
-                    *vertex_one
-                        .borrow_mut(token)
-                        .edges
-                        .get_mut(&id)
-                        .unwrap()
-                        .get_weight_mut() = weight(
-                        item.clone(),
-                        vertex_one.ghost(),
-                        vertex_two.ghost(),
-                        self,
-                        token,
-                    );
+                    let vertex_one = vertex_one.borrow_mut(token).edges.get_mut(&id);
+                    // SAFETY: It's guranteed that the id is within vertex_one's edges
+                    let vertex_one = unsafe { vertex_one.unwrap_unchecked() };
+                    *vertex_one.get_weight_mut() = weight.clone();
 
-                    *vertex_two
-                        .borrow_mut(token)
-                        .edges
-                        .get_mut(&id)
-                        .unwrap()
-                        .get_weight_mut() =
-                        weight(item, vertex_one.ghost(), vertex_two.ghost(), self, token);
+                    let vertex_two = vertex_two.borrow_mut(token).edges.get_mut(&id);
+                    // SAFETY: It's guranteed that the id is within vertex_two's edges
+                    let vertex_two = unsafe { vertex_two.unwrap_unchecked() };
+                    *vertex_two.get_weight_mut() = weight;
 
                     Ok(())
                 }
-                None => Edge::add_edge(
-                    weight(item, vertex_one.ghost(), vertex_two.ghost(), self, token),
-                    &vertex_one,
-                    &vertex_two,
-                    self.new_edge_id(),
-                    token,
-                )
-                .map_err(GraphError::AddEdgeError),
+                None => Edge::add_edge(weight, &vertex_one, &vertex_two, self.new_edge_id(), token)
+                    .map_err(AddEdgeError),
             }
         }
     }
