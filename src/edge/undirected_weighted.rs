@@ -1,8 +1,6 @@
-use core::convert::Infallible;
+use core::{convert::Infallible, fmt::Debug};
 
 use crate::{edge::EdgeTrait, ghost::GhostToken, id::EdgeId, SharedNode, VertexId};
-
-use core::fmt::Debug;
 
 /// An undirected edge between two [vertices](crate::Vertex), with a given weight
 #[derive(Debug)]
@@ -32,8 +30,8 @@ impl<'id, Item: Debug, Weight: Clone + Debug> EdgeTrait<'id, Item, Weight>
     ) -> Result<(), Self::Error> {
         let edge = Self(weight, first.clone(), second.clone());
 
-        first.borrow_mut(token).edges_mut().insert(id, edge.clone());
-        second.borrow_mut(token).edges_mut().insert(id, edge);
+        first.borrow_mut(token).edges.insert(id, edge.clone());
+        second.borrow_mut(token).edges.insert(id, edge);
 
         Ok(())
     }
@@ -49,5 +47,13 @@ impl<'id, Item: Debug, Weight: Clone + Debug> EdgeTrait<'id, Item, Weight>
         } else {
             None
         }
+    }
+
+    fn get_weight(&self) -> &Weight {
+        &self.0
+    }
+
+    fn get_weight_mut(&mut self) -> &mut Weight {
+        &mut self.0
     }
 }
