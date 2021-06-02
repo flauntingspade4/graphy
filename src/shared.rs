@@ -6,7 +6,7 @@ use crate::ghost::{GhostCell, GhostToken};
 
 /// A shared node, simply a wrapper around
 /// a [`NonNull`] around a [`GhostCell`] around
-/// `T`.
+/// the generic type `T`.
 ///
 /// As the contents of the [`NonNull`] cannot be
 /// mutated without a mutable reference to a
@@ -19,22 +19,18 @@ use crate::ghost::{GhostCell, GhostToken};
 #[derive(Debug)]
 pub struct Shared<'id, T>(NonNull<GhostCell<'id, T>>);
 
-impl<'id, T> Clone for Shared<'id, T> {
-    fn clone(&self) -> Self {
-        Self(self.0)
-    }
-}
-
 impl<'id, T> Shared<'id, T> {
     /// Makes a new [`Shared`] based off a given [`GhostCell`]
     pub fn new(item: GhostCell<'id, T>) -> Self {
         Self(Box::leak(Box::new(item)).into())
     }
     /// Returns a reference to the underlying [`GhostCell`]
+    #[must_use]
     pub fn ghost(&self) -> &GhostCell<'id, T> {
         unsafe { self.0.as_ref() }
     }
     /// A shorthand for `shared.ghost().g_borrow(&token)`
+    #[must_use]
     pub fn borrow<'a>(&self, token: &'a GhostToken<'id>) -> &'a T {
         unsafe { self.0.as_ref() }.g_borrow(token)
     }
@@ -49,5 +45,11 @@ impl<'id, T> Shared<'id, T> {
     /// contents of self
     pub(crate) unsafe fn drop(&self) {
         core::ptr::drop_in_place(self.0.as_ptr())
+    }
+    /// Clones self. Implemented as a method rather than
+    /// a trait so users can't clone it, leading to possible
+    /// use-after frees
+    pub(crate) const fn clone(&self) -> Self {
+        Self(self.0)
     }
 }
