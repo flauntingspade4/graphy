@@ -34,8 +34,7 @@ mod vertex;
 
 use edge::EdgeTrait;
 pub use graph::Graph;
-use id::EdgeId;
-pub use id::VertexId;
+pub use id::{EdgeId, VertexId};
 pub use shared::Shared;
 pub use vertex::Vertex;
 

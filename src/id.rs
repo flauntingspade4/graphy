@@ -62,7 +62,9 @@ impl<'id> core::fmt::Debug for VertexId<'id> {
     }
 }
 
-/// The type describing a [`Edge`] within a [`Graph`].
+/// The type describing a `Edge`'s index within a
+/// [`Graph`](crate::graph::Graph)
+///
 /// Seperate from [`VertexId`] so a user doesn't have to
 /// think about the id of their vertices being out of order
 #[derive(Clone, Copy, Hash)]
@@ -72,7 +74,7 @@ pub struct EdgeId<'id> {
 }
 
 impl<'id> EdgeId<'id> {
-    /// Constructs a new [`Id`] with a given id
+    /// Constructs a new [`EdgeId`] with a given id
     #[must_use]
     pub const fn new(id: usize) -> Self {
         Self {
