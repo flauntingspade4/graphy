@@ -1,4 +1,7 @@
-use core::ptr::NonNull;
+use core::{
+    alloc::{Allocator, Layout},
+    ptr::NonNull,
+};
 
 use alloc::boxed::Box;
 
@@ -15,12 +18,15 @@ use crate::ghost::{GhostCell, GhostToken};
 ///
 /// Cloning a [`Shared`] will **not** clone the
 /// internal value, and instead return a [`Shared`]
-/// with a pointer to the same value
+/// with a pointer to the same memory location
 #[derive(Debug)]
 pub struct Shared<'id, T>(NonNull<GhostCell<'id, T>>);
 
 impl<'id, T> Shared<'id, T> {
-    /// Makes a new [`Shared`] based off a given [`GhostCell`]
+    /// Makes a new [`Shared`] based off a given item
+    ///
+    /// Makes the item into a [`GhostCell`], allocates it
+    /// on the heap, and then uses the given memory address
     pub fn new(item: T) -> Self {
         Self(Box::leak(Box::new(GhostCell::new(item))).into())
     }
@@ -44,7 +50,12 @@ impl<'id, T> Shared<'id, T> {
     /// There can be no other pointers to the
     /// contents of self
     pub(crate) unsafe fn drop(&self) {
-        core::ptr::drop_in_place(self.0.as_ptr())
+        core::ptr::drop_in_place(self.0.as_ptr());
+        alloc::alloc::Global.deallocate(self.0.cast(), Layout::new::<T>());
+    }
+    pub(crate) unsafe fn read_mut(&mut self) -> &mut T {
+        let x = self.0.as_mut();
+        x.get_mut()
     }
     /// Clones self. Implemented as a method rather than
     /// a trait so users can't clone it, leading to possible

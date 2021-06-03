@@ -40,5 +40,9 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, We
     pub fn edges(&self) -> hashbrown::hash_map::Iter<'_, EdgeId<'id>, Shared<'id, Edge>> {
         self.edges.iter()
     }
+    pub fn edges_mut(&mut self) -> impl Iterator<Item = (&EdgeId<'id>, &mut Edge)> {
+        self.edges
+            .iter_mut()
+            .map(|(id, e)| (id, unsafe { e.read_mut() }))
     }
 }

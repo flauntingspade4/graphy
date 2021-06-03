@@ -8,14 +8,14 @@ use hashbrown::HashMap;
 /// The overall graph, just a container for [vertices](Vertex)
 ///
 /// # Types
-/// `'id` - The marker lifetime to indicate which [`GhostToken`] works
+/// * `'id` - The marker lifetime to indicate which [`GhostToken`] works
 /// with the specific graph's [`GhostToken`]s
 ///
-/// `Item` - The type that each [`Vertex`] contains
+/// * `Item` - The type that each [`Vertex`] contains
 ///
-/// `Weight` - The type that each edge between vertices contains
+/// * `Weight` - The type that each edge between vertices contains
 ///
-/// `Edge` - The type of edge being used, examples of which are
+/// * `Edge` - The type of edge being used, examples of which are
 /// [`UnDirectedUnWeightedEdge`](crate::edge::UnDirectedUnWeightedEdge)
 /// and [`UnDirectedWeightedEdge`](crate::edge::UnDirectedWeightedEdge)
 pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
@@ -39,7 +39,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Drop
     for Graph<'id, Item, Weight, Edge>
 {
     fn drop(&mut self) {
-        self.clear()
+        self.vertices.drain().for_each(|(_, s)| unsafe { s.drop() });
+        self.edges.drain().for_each(|(_, s)| unsafe { s.drop() });
     }
 }
 
@@ -59,8 +60,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// Adds a vertex with no edges, and returns the [`VertexId`] of the
     /// created vertex
     pub fn add_vertex(&mut self, item: Item) -> VertexId<'id> {
-        let vertex = Vertex::new(self.current_vertex_id, item);
         let id = self.new_vertex_id();
+        let vertex = Vertex::new(id, item);
         self.vertex_len += 1;
         self.vertices.insert(id, Shared::new(vertex));
         id
@@ -287,7 +288,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             // SAFETY: Each key will be removed only once,
             // and is guranteed to be within to_remove, as
             // the keys were gotten from to_remove
-            let one = unsafe { one.unwrap_unchecked() };
+            // let one = unsafe { one.unwrap_unchecked() };
+            let one = one.unwrap();
 
             // Finds the other vertex in the edge
             let two = one
@@ -396,14 +398,17 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             .ok_or(VertexNotFound(id_one))?
             .borrow(token);
 
-        if let Some(vertex_two) = self.vertices.get(&id_two) {
-            let second = vertex_two.borrow(token);
-            for id in vertex_one.edges.keys() {
-                if second.edges.contains_key(id) {
-                    return Ok(true);
+        match self.vertices.get(&id_two) {
+            Some(vertex_two) => {
+                let second = vertex_two.borrow(token);
+                for id in vertex_one.edges.keys() {
+                    if second.edges.contains_key(id) {
+                        return Ok(true);
+                    }
                 }
+                Ok(false)
             }
+            None => Err(VertexNotFound(id_two)),
         }
-        Err(VertexNotFound(id_two))
     }
 }
