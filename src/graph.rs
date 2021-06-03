@@ -1,10 +1,8 @@
 use hashbrown::HashMap;
 
 use crate::{
-    edge::EdgeTrait,
-    ghost::{GhostCell, GhostToken},
-    id::EdgeId,
-    GraphError, Node, Shared, SharedNode, Vertex, VertexId,
+    edge::EdgeTrait, ghost::GhostToken, id::EdgeId, GraphError, Node, Shared, SharedNode, Vertex,
+    VertexId,
 };
 
 /// The overall graph, just a container for [vertices](Vertex)
@@ -57,7 +55,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// Adds a vertex with no edges, and returns the [`VertexId`] of the
     /// created vertex
     pub fn add_vertex(&mut self, item: Item) -> VertexId<'id> {
-        let vertex = GhostCell::new(Vertex::new(self.current_vertex_id, item));
+        let vertex = Vertex::new(self.current_vertex_id, item);
         let id = self.new_vertex_id();
         self.len += 1;
         self.vertices.insert(id, Shared::new(vertex));
@@ -171,15 +169,10 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
 
             match edge_id {
                 Some(id) => {
-                    let vertex_one = vertex_one.borrow_mut(token).edges.get_mut(&id);
+                    let vertex_one = vertex_one.borrow(token).edges.get(&id);
                     // SAFETY: It's guranteed that the id is within vertex_one's edges
-                    let vertex_one = unsafe { vertex_one.unwrap_unchecked() };
-                    *vertex_one.get_weight_mut() = weight.clone();
-
-                    let vertex_two = vertex_two.borrow_mut(token).edges.get_mut(&id);
-                    // SAFETY: It's guranteed that the id is within vertex_two's edges
-                    let vertex_two = unsafe { vertex_two.unwrap_unchecked() };
-                    *vertex_two.get_weight_mut() = weight;
+                    let vertex_one = unsafe { vertex_one.unwrap_unchecked() }.clone();
+                    *vertex_one.borrow_mut(token).get_weight_mut() = weight;
 
                     Ok(())
                 }
@@ -272,7 +265,11 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             let one = unsafe { one.unwrap_unchecked() };
 
             // Finds the other vertex in the edge
-            let two = one.other(id, token).ok_or(VertexNotFound(id))?.clone();
+            let two = one
+                .borrow(token)
+                .other(id, token)
+                .ok_or(VertexNotFound(id))?
+                .clone();
             let two = two.borrow_mut(token);
 
             // Removes the edge from the other vertex's edges

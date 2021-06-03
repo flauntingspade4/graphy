@@ -21,8 +21,8 @@ pub struct Shared<'id, T>(NonNull<GhostCell<'id, T>>);
 
 impl<'id, T> Shared<'id, T> {
     /// Makes a new [`Shared`] based off a given [`GhostCell`]
-    pub fn new(item: GhostCell<'id, T>) -> Self {
-        Self(Box::leak(Box::new(item)).into())
+    pub fn new(item: T) -> Self {
+        Self(Box::leak(Box::new(GhostCell::new(item))).into())
     }
     /// Returns a reference to the underlying [`GhostCell`]
     #[must_use]

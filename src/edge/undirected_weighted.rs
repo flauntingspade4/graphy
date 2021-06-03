@@ -1,6 +1,6 @@
 use core::{convert::Infallible, fmt::Debug};
 
-use crate::{edge::EdgeTrait, ghost::GhostToken, id::EdgeId, SharedNode, VertexId};
+use crate::{edge::EdgeTrait, ghost::GhostToken, id::EdgeId, Shared, SharedNode, VertexId};
 
 /// An undirected edge between two [vertices](crate::Vertex), with a given weight
 #[derive(Debug)]
@@ -9,12 +9,6 @@ pub struct UnDirectedWeightedEdge<'id, Item: Debug, Weight: Clone + Debug>(
     SharedNode<'id, Item, Weight, Self>,
     SharedNode<'id, Item, Weight, Self>,
 );
-
-impl<'id, Item: Debug, Weight: Clone + Debug> Clone for UnDirectedWeightedEdge<'id, Item, Weight> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone(), self.2.clone())
-    }
-}
 
 impl<'id, Item: Debug, Weight: Clone + Debug> EdgeTrait<'id, Item, Weight>
     for UnDirectedWeightedEdge<'id, Item, Weight>
@@ -28,7 +22,7 @@ impl<'id, Item: Debug, Weight: Clone + Debug> EdgeTrait<'id, Item, Weight>
         id: EdgeId<'id>,
         token: &'new_id mut GhostToken<'id>,
     ) -> Result<(), Self::Error> {
-        let edge = Self(weight, first.clone(), second.clone());
+        let edge = Shared::new(Self(weight, first.clone(), second.clone()));
 
         first.borrow_mut(token).edges.insert(id, edge.clone());
         second.borrow_mut(token).edges.insert(id, edge);

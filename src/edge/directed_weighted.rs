@@ -1,6 +1,6 @@
 use core::convert::Infallible;
 
-use crate::{ghost::GhostToken, id::EdgeId, SharedNode, VertexId};
+use crate::{ghost::GhostToken, id::EdgeId, Shared, SharedNode, VertexId};
 
 use super::EdgeTrait;
 
@@ -11,12 +11,6 @@ pub struct DirectedWeightedEdge<'id, Item, Weight: Clone>(
     SharedNode<'id, Item, Weight, Self>,
     SharedNode<'id, Item, Weight, Self>,
 );
-
-impl<'id, Item, Weight: Clone> Clone for DirectedWeightedEdge<'id, Item, Weight> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone(), self.2.clone())
-    }
-}
 
 impl<'id, Item, Weight: Clone> DirectedWeightedEdge<'id, Item, Weight> {
     /// Returns the 'sender' in the edge
@@ -41,7 +35,7 @@ impl<'id, Item, Weight: Clone> EdgeTrait<'id, Item, Weight>
         id: EdgeId<'id>,
         token: &'new_id mut GhostToken<'id>,
     ) -> Result<(), Self::Error> {
-        let edge = Self(weight, first.clone(), second.clone());
+        let edge = Shared::new(Self(weight, first.clone(), second.clone()));
 
         first.borrow_mut(token).edges.insert(id, edge.clone());
         second.borrow_mut(token).edges.insert(id, edge);

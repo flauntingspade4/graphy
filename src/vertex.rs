@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use hashbrown::HashMap;
 
-use crate::{edge::EdgeTrait, id::EdgeId, VertexId};
+use crate::{edge::EdgeTrait, id::EdgeId, Shared, VertexId};
 
 /// Represents a vertex in a graph. Vertices can hold data,
 /// but are usually only useful in relation to other
@@ -10,7 +10,7 @@ use crate::{edge::EdgeTrait, id::EdgeId, VertexId};
 #[derive(Debug)]
 pub struct Vertex<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
     pub(crate) id: VertexId<'id>,
-    pub(crate) edges: HashMap<EdgeId<'id>, Edge>,
+    pub(crate) edges: HashMap<EdgeId<'id>, Shared<'id, Edge>>,
     item: Item,
     _phantom: &'id PhantomData<Weight>,
 }
@@ -37,11 +37,11 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, We
     pub fn get_item_mut(&mut self) -> &mut Item {
         &mut self.item
     }
-    pub fn iter(&self) -> hashbrown::hash_map::Iter<'_, EdgeId<'id>, Edge> {
+    pub fn iter(&self) -> hashbrown::hash_map::Iter<'_, EdgeId<'id>, Shared<'id, Edge>> {
         self.edges.iter()
     }
     #[must_use]
-    pub fn iter_mut(&mut self) -> hashbrown::hash_map::IterMut<'_, EdgeId<'id>, Edge> {
+    pub fn iter_mut(&mut self) -> hashbrown::hash_map::IterMut<'_, EdgeId<'id>, Shared<'id, Edge>> {
         self.edges.iter_mut()
     }
 }
