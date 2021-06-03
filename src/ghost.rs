@@ -22,7 +22,7 @@ impl<'id> InvariantLifetime<'id> {
 ///     {
 ///         let first = graph.add_vertex(0);
 ///
-///         let first_vertex = graph.get(first).unwrap().ghost();
+///         let first_vertex = graph.get_vertex(first).unwrap().ghost();
 ///
 ///         // As `token` is mutable, we can change the contents of a `GhostCell`
 ///         *first_vertex.g_borrow_mut(&mut token).get_item_mut() += 10;

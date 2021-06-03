@@ -23,7 +23,7 @@ use crate::ghost::InvariantLifetime;
 ///
 ///     let third = graph.add_vertex(());
 ///
-///     assert!(graph.get(VertexId::new(1)).is_none());
+///     assert!(graph.get_vertex(VertexId::new(1)).is_none());
 /// })
 /// ```
 #[derive(Clone, Copy, Hash)]

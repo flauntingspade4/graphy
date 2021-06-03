@@ -22,6 +22,7 @@ fn add_one() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn add_many() {
     let mut graph: Graph<(), (), UnDirectedWeightedEdge<_, _>> = Graph::new();
 
@@ -58,9 +59,12 @@ fn add_edge() {
             .add_edge(second, third, (), |_, _, _, _, _| weight, &mut t)
             .unwrap();
 
-        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).iter().len(), 1);
-        assert_eq!(graph.get_vertex(second).unwrap().borrow(&t).iter().len(), 2);
-        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).edges().len(), 1);
+        assert_eq!(
+            graph.get_vertex(second).unwrap().borrow(&t).edges().len(),
+            2
+        );
+        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).edges().len(), 1);
     });
 }
 
@@ -87,9 +91,12 @@ fn remove_edge_between() {
 
         graph.remove_edge_between(first, second, &mut t).unwrap();
 
-        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).iter().len(), 0);
-        assert_eq!(graph.get_vertex(second).unwrap().borrow(&t).iter().len(), 1);
-        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).edges().len(), 0);
+        assert_eq!(
+            graph.get_vertex(second).unwrap().borrow(&t).edges().len(),
+            1
+        );
+        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).edges().len(), 1);
     })
 }
 
@@ -117,8 +124,8 @@ fn remove() {
         graph.remove(second, &mut t).unwrap();
 
         assert!(graph.get_vertex(second).is_none());
-        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).iter().len(), 0);
-        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).iter().len(), 0);
+        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).edges().len(), 0);
+        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).edges().len(), 0);
     })
 }
 
@@ -179,19 +186,21 @@ fn edges_mut() {
             .add_edge(one, two, (), |_, _, _, _, _| x, &mut t)
             .unwrap();
 
-        graph
+        for (_, edge) in graph
             .get_vertex(one)
             .unwrap()
             .borrow_mut(&mut t)
-            .iter_mut()
-            .for_each(|(_, t)| *t.get_weight_mut() *= 5.);
+            .edges_mut()
+        {
+            *edge.get_weight_mut() *= 5.;
+        }
 
         graph
             .get_vertex(one)
             .unwrap()
             .borrow(&t)
-            .iter()
-            .for_each(|(_, t)| assert_eq!(x * 5., *t.get_weight()))
+            .edges()
+            .for_each(|(_, e)| assert_eq!(x * 5., *e.borrow(&t).get_weight()))
     });
 }
 
@@ -222,10 +231,11 @@ fn distance() {
             .get_vertex(one)
             .unwrap()
             .borrow(&t)
-            .iter()
+            .edges()
             .next()
             .unwrap()
             .1
+            .borrow(&t)
             .get_weight();
 
         assert_eq!(1., *distance);

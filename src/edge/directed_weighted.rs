@@ -2,7 +2,7 @@ use core::convert::Infallible;
 
 use crate::{edge::EdgeTrait, ghost::GhostToken, id::EdgeId, Graph, Shared, SharedNode, VertexId};
 
-/// An undirected edge between two [vertices](crate::Vertex), with a given weight
+/// A directed edge between two [vertices](crate::Vertex), with a given weight
 #[derive(Debug)]
 pub struct DirectedWeightedEdge<'id, Item, Weight>(
     pub Weight,

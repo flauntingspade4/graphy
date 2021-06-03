@@ -9,7 +9,7 @@ use crate::{edge::EdgeTrait, id::EdgeId, Shared, VertexId};
 /// vertices
 #[derive(Debug)]
 pub struct Vertex<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
-    pub(crate) id: VertexId<'id>,
+    id: VertexId<'id>,
     pub(crate) edges: HashMap<EdgeId<'id>, Shared<'id, Edge>>,
     item: Item,
     _phantom: &'id PhantomData<Weight>,
@@ -18,9 +18,9 @@ pub struct Vertex<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
 impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, Weight, Edge> {
     /// Creates a new [`Vertex`] with the given `id`
     #[must_use]
-    pub(crate) fn new(id: usize, item: Item) -> Self {
+    pub(crate) fn new(id: VertexId<'id>, item: Item) -> Self {
         Self {
-            id: VertexId::new(id),
+            id,
             edges: HashMap::new(),
             item,
             _phantom: &PhantomData,
@@ -37,11 +37,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Vertex<'id, Item, We
     pub fn get_item_mut(&mut self) -> &mut Item {
         &mut self.item
     }
-    pub fn iter(&self) -> hashbrown::hash_map::Iter<'_, EdgeId<'id>, Shared<'id, Edge>> {
+    pub fn edges(&self) -> hashbrown::hash_map::Iter<'_, EdgeId<'id>, Shared<'id, Edge>> {
         self.edges.iter()
     }
-    #[must_use]
-    pub fn iter_mut(&mut self) -> hashbrown::hash_map::IterMut<'_, EdgeId<'id>, Shared<'id, Edge>> {
-        self.edges.iter_mut()
     }
 }

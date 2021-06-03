@@ -1,6 +1,10 @@
 #![warn(clippy::pedantic, clippy::nursery, clippy::all)]
-#![feature(const_raw_ptr_deref, const_mut_refs, option_result_unwrap_unchecked)]
-#![no_std]
+#![feature(
+    const_raw_ptr_deref,
+    const_mut_refs,
+    option_result_unwrap_unchecked,
+    allocator_api
+)]
 
 //! A simple and efficient graph-theory library written with a focus
 //! on error handling
@@ -32,13 +36,13 @@ mod id;
 mod shared;
 mod vertex;
 
+pub use crate::graph::Graph;
 use edge::EdgeTrait;
-pub use graph::Graph;
 pub use id::{EdgeId, VertexId};
 pub use shared::Shared;
 pub use vertex::Vertex;
 
-type SharedNode<'id, Item, Weight, Edge> = Shared<'id, Vertex<'id, Item, Weight, Edge>>;
+pub type SharedNode<'id, Item, Weight, Edge> = Shared<'id, Vertex<'id, Item, Weight, Edge>>;
 /// A node within the graph, shorthand for `GhostCell<Vertex>`
 pub type Node<'id, Item, Weight, Edge> = ghost::GhostCell<'id, Vertex<'id, Item, Weight, Edge>>;
 
