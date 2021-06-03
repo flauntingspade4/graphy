@@ -53,3 +53,11 @@ impl<'id, T> Shared<'id, T> {
         Self(self.0)
     }
 }
+
+impl<'id, T> PartialEq for Shared<'id, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ptr() == other.0.as_ptr()
+    }
+}
+
+impl<'id, T> Eq for Shared<'id, T> {}
