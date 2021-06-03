@@ -18,7 +18,7 @@ fn add_one() {
     let id = graph.add_vertex(());
 
     assert_eq!(id.id(), 0);
-    assert_eq!(graph.len(), 1);
+    assert_eq!(graph.vertex_len(), 1);
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn add_many() {
     let id = graph.add_vertex(());
 
     assert_eq!(id.id(), x);
-    assert_eq!(graph.len(), x + 1);
+    assert_eq!(graph.vertex_len(), x + 1);
 }
 
 #[test]
@@ -58,9 +58,9 @@ fn add_edge() {
             .add_edge(second, third, (), |_, _, _, _, _| weight, &mut t)
             .unwrap();
 
-        assert_eq!(graph.get(first).unwrap().borrow(&t).iter().len(), 1);
-        assert_eq!(graph.get(second).unwrap().borrow(&t).iter().len(), 2);
-        assert_eq!(graph.get(third).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get_vertex(second).unwrap().borrow(&t).iter().len(), 2);
+        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).iter().len(), 1);
     });
 }
 
@@ -87,9 +87,9 @@ fn remove_edge_between() {
 
         graph.remove_edge_between(first, second, &mut t).unwrap();
 
-        assert_eq!(graph.get(first).unwrap().borrow(&t).iter().len(), 0);
-        assert_eq!(graph.get(second).unwrap().borrow(&t).iter().len(), 1);
-        assert_eq!(graph.get(third).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).iter().len(), 0);
+        assert_eq!(graph.get_vertex(second).unwrap().borrow(&t).iter().len(), 1);
+        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).iter().len(), 1);
     })
 }
 
@@ -116,9 +116,9 @@ fn remove() {
 
         graph.remove(second, &mut t).unwrap();
 
-        assert!(graph.get(second).is_none());
-        assert_eq!(graph.get(first).unwrap().borrow(&t).iter().len(), 0);
-        assert_eq!(graph.get(third).unwrap().borrow(&t).iter().len(), 0);
+        assert!(graph.get_vertex(second).is_none());
+        assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).iter().len(), 0);
+        assert_eq!(graph.get_vertex(third).unwrap().borrow(&t).iter().len(), 0);
     })
 }
 
@@ -142,7 +142,7 @@ fn id_out_of_order() {
 
         let third = graph.add_vertex(());
 
-        assert!(graph.get(second).is_none());
+        assert!(graph.get_vertex(second).is_none());
         assert_eq!(third.id(), 2);
     });
 }
@@ -180,14 +180,14 @@ fn edges_mut() {
             .unwrap();
 
         graph
-            .get(one)
+            .get_vertex(one)
             .unwrap()
             .borrow_mut(&mut t)
             .iter_mut()
             .for_each(|(_, t)| *t.get_weight_mut() *= 5.);
 
         graph
-            .get(one)
+            .get_vertex(one)
             .unwrap()
             .borrow(&t)
             .iter()
@@ -219,7 +219,7 @@ fn distance() {
             .unwrap();
 
         let distance = graph
-            .get(one)
+            .get_vertex(one)
             .unwrap()
             .borrow(&t)
             .iter()

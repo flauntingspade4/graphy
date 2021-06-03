@@ -1,9 +1,9 @@
-use hashbrown::HashMap;
-
 use crate::{
     edge::EdgeTrait, ghost::GhostToken, id::EdgeId, GraphError, Node, Shared, SharedNode, Vertex,
     VertexId,
 };
+
+use hashbrown::HashMap;
 
 /// The overall graph, just a container for [vertices](Vertex)
 ///
@@ -20,9 +20,11 @@ use crate::{
 /// and [`UnDirectedWeightedEdge`](crate::edge::UnDirectedWeightedEdge)
 pub struct Graph<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> {
     vertices: HashMap<VertexId<'id>, SharedNode<'id, Item, Weight, Edge>>,
+    pub(crate) edges: HashMap<EdgeId<'id>, Shared<'id, Edge>>,
     current_vertex_id: usize,
     current_edge_id: usize,
-    len: usize,
+    vertex_len: usize,
+    edge_len: usize,
 }
 
 impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Default
@@ -47,9 +49,11 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn new() -> Self {
         Self {
             vertices: HashMap::new(),
+            edges: HashMap::new(),
             current_vertex_id: 0,
             current_edge_id: 0,
-            len: 0,
+            vertex_len: 0,
+            edge_len: 0,
         }
     }
     /// Adds a vertex with no edges, and returns the [`VertexId`] of the
@@ -57,7 +61,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn add_vertex(&mut self, item: Item) -> VertexId<'id> {
         let vertex = Vertex::new(self.current_vertex_id, item);
         let id = self.new_vertex_id();
-        self.len += 1;
+        self.vertex_len += 1;
         self.vertices.insert(id, Shared::new(vertex));
         id
     }
@@ -83,7 +87,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             &'a mut GhostToken<'id>,
         ) -> Weight,
         token: &mut GhostToken<'id>,
-    ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
+    ) -> Result<EdgeId<'id>, GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{AlreadyEdgeBetween, IdenticalVertex, VertexNotFound};
 
         let id = self.new_edge_id();
@@ -107,12 +111,18 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
 
             let weight = weight(item, first.ghost(), second.ghost(), self, token);
 
-            Edge::add_edge(weight, &first, &second, id, token).map_err(GraphError::AddEdgeError)
+            Edge::add_edge(weight, &first, &second, id, self, token)
+                .map_err(GraphError::AddEdgeError)?;
+            self.edge_len += 1;
+            Ok(id)
         }
     }
     /// Creates an edge between `id_one` and `id_two`
     /// if it doesn't already exist, and if it does,
     /// changes it to the result of `weight`
+    ///
+    /// If no errors occur, the [`EdgeId`] of the edge
+    /// is returned
     ///
     /// # Errors
     /// If `id_one` is the same as `id_two`,
@@ -133,7 +143,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             &'a mut GhostToken<'id>,
         ) -> Weight,
         token: &mut GhostToken<'id>,
-    ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
+    ) -> Result<EdgeId<'id>, GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{AddEdgeError, IdenticalVertex, VertexNotFound};
 
         if id_one == id_two {
@@ -164,17 +174,19 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             let ghost_two = vertex_two.ghost();
             let weight = weight(item, ghost_one, ghost_two, self, token);
 
-            match edge_id {
-                Some(id) => {
-                    let vertex_one = vertex_one.borrow(token).edges.get(&id);
-                    // SAFETY: It's guranteed that the id is within vertex_one's edges
-                    let vertex_one = unsafe { vertex_one.unwrap_unchecked() }.clone();
-                    *vertex_one.borrow_mut(token).get_weight_mut() = weight;
+            if let Some(id) = edge_id {
+                let vertex_one = vertex_one.borrow(token).edges.get(&id);
+                // SAFETY: It's guranteed that the id is within vertex_one's edges
+                let vertex_one = unsafe { vertex_one.unwrap_unchecked() }.clone();
+                *vertex_one.borrow_mut(token).get_weight_mut() = weight;
 
-                    Ok(())
-                }
-                None => Edge::add_edge(weight, &vertex_one, &vertex_two, self.new_edge_id(), token)
-                    .map_err(AddEdgeError),
+                Ok(id)
+            } else {
+                let id = self.new_edge_id();
+                Edge::add_edge(weight, &vertex_one, &vertex_two, id, self, token)
+                    .map_err(AddEdgeError)?;
+                self.edge_len += 1;
+                Ok(id)
             }
         }
     }
@@ -182,19 +194,27 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// Empties self
     pub fn clear(&mut self) {
         self.vertices.drain().for_each(|(_, s)| unsafe { s.drop() });
+        self.edges.drain().for_each(|(_, s)| unsafe { s.drop() });
         self.current_vertex_id = 0;
         self.current_edge_id = 0;
-        self.len = 0;
+        self.vertex_len = 0;
+        self.edge_len = 0;
     }
     /// The number of [vertices](Vertex) in the graph
     #[must_use]
-    pub fn len(&self) -> usize {
-        self.len
+    pub fn vertex_len(&self) -> usize {
+        self.vertex_len
     }
+    /// The number of `edges` in the graph
+    #[must_use]
+    pub fn edge_len(&self) -> usize {
+        self.edge_len
+    }
+
     /// If there are no [vertices](Vertex) in the graph
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.vertex_len == 0
     }
     /// Gets a new id for a new [`Vertex`]
     fn new_vertex_id(&mut self) -> VertexId<'id> {
@@ -212,9 +232,17 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// # Errors
     /// Returns `None` if `id` does not exist within the graph
     #[must_use]
-    pub fn get(&self, id: VertexId<'id>) -> Option<&SharedNode<'id, Item, Weight, Edge>> {
+    pub fn get_vertex(&self, id: VertexId<'id>) -> Option<&SharedNode<'id, Item, Weight, Edge>> {
         self.vertices.get(&id)
     }
+    /// Attempts to get a vertex using a given [`VertexId`]
+    /// # Errors
+    /// Returns `None` if `id` does not exist within the graph
+    #[must_use]
+    pub fn get_edge(&self, id: EdgeId<'id>) -> Option<&Shared<'id, Edge>> {
+        self.edges.get(&id)
+    }
+
     /// Returns an immutable iterator over the
     /// graph's nodes
     #[must_use]
@@ -231,8 +259,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     ) -> hashbrown::hash_map::IterMut<'_, VertexId<'id>, SharedNode<'id, Item, Weight, Edge>> {
         self.vertices.iter_mut()
     }
-    /// Attempts to remove a [`Vertex`] from the graph, removing all edges from and
-    /// to the [`Vertex`]
+    /// Attempts to remove a [`Vertex`] from the graph, removing all edges to and
+    /// from the [`Vertex`]
     /// # Errors
     /// Returns a [`GraphError`] if `id` is not found within the graph
     pub fn remove(
@@ -242,7 +270,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{EdgeNotFound, VertexNotFound};
 
-        self.len -= 1;
+        self.vertex_len -= 1;
 
         let to_remove = self.vertices.remove(&id).ok_or(VertexNotFound(id))?;
 
@@ -271,6 +299,11 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
 
             // Removes the edge from the other vertex's edges
             two.edges.remove(&e_id).ok_or(EdgeNotFound(e_id))?;
+
+            let edge = self.edges.remove(&e_id).ok_or(EdgeNotFound(e_id))?;
+
+            // SAFETY: No pointers to the edge can exist any more
+            unsafe { edge.drop() };
         }
 
         unsafe { to_remove.drop() }
@@ -317,22 +350,32 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             }
         }
 
-        // Actually remove the edges
-        self.vertices
-            .get(&id_one)
-            .ok_or(VertexNotFound(id_one))?
-            .borrow_mut(token)
-            .edges
-            .remove(&edge_id.ok_or(NoEdgeBetween)?);
+        if let Some(e_id) = edge_id {
+            // Actually remove the edges
+            self.vertices
+                .get(&id_one)
+                .ok_or(VertexNotFound(id_one))?
+                .borrow_mut(token)
+                .edges
+                .remove(&e_id);
 
-        self.vertices
-            .get(&id_two)
-            .ok_or(VertexNotFound(id_one))?
-            .borrow_mut(token)
-            .edges
-            .remove(&edge_id.ok_or(NoEdgeBetween)?);
+            self.vertices
+                .get(&id_two)
+                .ok_or(VertexNotFound(id_two))?
+                .borrow_mut(token)
+                .edges
+                .remove(&e_id);
 
-        Ok(())
+            let edge = self.edges.remove(&e_id).unwrap();
+
+            // SAFETY: No pointers to the edge can exist any more
+            unsafe { edge.drop() };
+
+            Ok(())
+        } else {
+            // There was no edge between `id_one` and `id_two`
+            Err(NoEdgeBetween)
+        }
     }
     /// Returns whether `id_one` and `id_two` have an edge
     /// connecting them

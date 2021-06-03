@@ -9,7 +9,7 @@ fn can_get() {
 
         let token = graph.add_vertex(first_item);
 
-        let item = graph.get(token).unwrap();
+        let item = graph.get_vertex(token).unwrap();
 
         assert_eq!(*item.borrow(&t).get_item(), first_item);
     });
