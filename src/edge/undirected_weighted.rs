@@ -4,13 +4,13 @@ use crate::{edge::EdgeTrait, ghost::GhostToken, id::EdgeId, Shared, SharedNode, 
 
 /// An undirected edge between two [vertices](crate::Vertex), with a given weight
 #[derive(Debug)]
-pub struct UnDirectedWeightedEdge<'id, Item: Debug, Weight: Clone + Debug>(
+pub struct UnDirectedWeightedEdge<'id, Item: Debug, Weight>(
     pub Weight,
     SharedNode<'id, Item, Weight, Self>,
     SharedNode<'id, Item, Weight, Self>,
 );
 
-impl<'id, Item: Debug, Weight: Clone + Debug> EdgeTrait<'id, Item, Weight>
+impl<'id, Item: Debug, Weight> EdgeTrait<'id, Item, Weight>
     for UnDirectedWeightedEdge<'id, Item, Weight>
 {
     type Error = Infallible;

@@ -133,10 +133,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             &'a mut GhostToken<'id>,
         ) -> Weight,
         token: &mut GhostToken<'id>,
-    ) -> Result<(), GraphError<'id, Item, Weight, Edge>>
-    where
-        Weight: Clone,
-    {
+    ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{AddEdgeError, IdenticalVertex, VertexNotFound};
 
         if id_one == id_two {

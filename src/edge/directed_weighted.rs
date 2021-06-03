@@ -6,13 +6,13 @@ use super::EdgeTrait;
 
 /// An undirected edge between two [vertices](crate::Vertex), with a given weight
 #[derive(Debug)]
-pub struct DirectedWeightedEdge<'id, Item, Weight: Clone>(
+pub struct DirectedWeightedEdge<'id, Item, Weight>(
     pub Weight,
     SharedNode<'id, Item, Weight, Self>,
     SharedNode<'id, Item, Weight, Self>,
 );
 
-impl<'id, Item, Weight: Clone> DirectedWeightedEdge<'id, Item, Weight> {
+impl<'id, Item, Weight> DirectedWeightedEdge<'id, Item, Weight> {
     /// Returns the 'sender' in the edge
     pub fn sender(&self) -> &SharedNode<'id, Item, Weight, Self> {
         &self.1
@@ -23,7 +23,7 @@ impl<'id, Item, Weight: Clone> DirectedWeightedEdge<'id, Item, Weight> {
     }
 }
 
-impl<'id, Item, Weight: Clone> EdgeTrait<'id, Item, Weight>
+impl<'id, Item, Weight> EdgeTrait<'id, Item, Weight>
     for DirectedWeightedEdge<'id, Item, Weight>
 {
     type Error = Infallible;
