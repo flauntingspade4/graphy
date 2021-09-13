@@ -39,8 +39,11 @@ pub struct GhostToken<'id> {
 
 impl<'id> GhostToken<'id> {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new<R>(f: impl for<'new_id> FnOnce(GhostToken<'new_id>) -> R) -> R {
-        let token = Self::default();
+    pub fn new<'new_id, F, R>(f: F) -> R
+    where
+        F: FnOnce(GhostToken<'new_id>) -> R + 'new_id,
+    {
+        let token = GhostToken::default();
         f(token)
     }
 }
@@ -64,11 +67,12 @@ impl<'id, T> GhostCell<'id, T> {
             _marker: InvariantLifetime::new(),
         }
     }
+    /// Gets a mutable value
     pub fn get_mut(&mut self) -> &mut T {
         self.value.get_mut()
     }
-    /// Immutably borrow's the [`GhostCell`]'s contents,
-    /// with the gurantee it's not being accessed mutably
+    /// Immutably borrows the [`GhostCell`]'s contents,
+    /// with the guarantee it's not being accessed mutably
     /// elsewhere by the fact the token must be immutably borrowed
     /// for the entirety of the time it's contents is borrowed
     pub const fn g_borrow<'a>(&'a self, _token: &'a GhostToken<'id>) -> &'a T {
