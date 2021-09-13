@@ -13,7 +13,7 @@ use crate::ghost::{GhostCell, GhostToken};
 ///
 /// As the contents of the [`NonNull`] cannot be
 /// mutated without a mutable reference to a
-/// [`GhostToken`], it's guranteed that Rust's
+/// [`GhostToken`], it's guaranteed that Rust's
 /// aliasing rules are upheld.
 ///
 /// Cloning a [`Shared`] will **not** clone the
@@ -40,7 +40,7 @@ impl<'id, T> Shared<'id, T> {
     pub fn borrow<'a>(&self, token: &'a GhostToken<'id>) -> &'a T {
         unsafe { self.0.as_ref() }.g_borrow(token)
     }
-    /// A shorthand for `shared.ghost().g_borrow_mut(&token)`
+    /// A shorthand for `shared.ghost().g_borrow_mut(&mut token)`
     pub fn borrow_mut<'a>(&self, token: &'a mut GhostToken<'id>) -> &'a mut T {
         unsafe { self.0.as_ref() }.g_borrow_mut(token)
     }
@@ -53,6 +53,12 @@ impl<'id, T> Shared<'id, T> {
         core::ptr::drop_in_place(self.0.as_ptr());
         alloc::alloc::Global.deallocate(self.0.cast(), Layout::new::<T>());
     }
+    /// Unsafely reads the inner value as mutable
+    ///
+    /// # Safety
+    /// This should only be used if one is certain that
+    /// no other pointers exist to `self` which could
+    /// be reading or writing at the same time
     pub(crate) unsafe fn read_mut(&mut self) -> &mut T {
         let x = self.0.as_mut();
         x.get_mut()
