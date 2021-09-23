@@ -32,10 +32,16 @@ impl<'id, Item, Weight> EdgeTrait<'id, Item, Weight> for DirectedWeightedEdge<'i
         graph: &mut Graph<'id, Item, Weight, Self>,
         token: &'new_id mut GhostToken<'id>,
     ) -> Result<(), Self::Error> {
-        let edge = Shared::new(Self(weight, first.clone(), second.clone()));
+        let edge = Shared::new(Self(weight, first.clone_shared(), second.clone_shared()));
 
-        first.borrow_mut(token).edges.insert(id, edge.clone());
-        second.borrow_mut(token).edges.insert(id, edge.clone());
+        first
+            .borrow_mut(token)
+            .edges
+            .insert(id, edge.clone_shared());
+        second
+            .borrow_mut(token)
+            .edges
+            .insert(id, edge.clone_shared());
         graph.edges.insert(id, edge);
 
         Ok(())

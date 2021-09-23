@@ -99,13 +99,13 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
                 .vertices
                 .get(&id_one)
                 .ok_or(GraphError::VertexNotFound(id_one))?
-                .clone();
+                .clone_shared();
 
             let second = self
                 .vertices
                 .get(&id_two)
                 .ok_or(GraphError::VertexNotFound(id_two))?
-                .clone();
+                .clone_shared();
 
             Edge::add_edge(weight, &first, &second, id, self, token)
                 .map_err(GraphError::AddEdgeError)?;
@@ -149,13 +149,13 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
                 .vertices
                 .get(&id_one)
                 .ok_or(VertexNotFound(id_one))?
-                .clone();
+                .clone_shared();
 
             let vertex_two = self
                 .vertices
                 .get(&id_two)
                 .ok_or(VertexNotFound(id_two))?
-                .clone();
+                .clone_shared();
 
             let mut edge_id = None;
 
@@ -173,7 +173,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             if let Some(id) = edge_id {
                 let vertex_one = vertex_one.borrow(token).edges.get(&id);
                 // SAFETY: It's guranteed that the id is within vertex_one's edges
-                let vertex_one = unsafe { vertex_one.unwrap_unchecked() }.clone();
+                let vertex_one = unsafe { vertex_one.unwrap_unchecked() }.clone_shared();
                 *vertex_one.borrow_mut(token).get_weight_mut() = weight;
 
                 Ok(id)
@@ -291,7 +291,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
                 .borrow(token)
                 .other(id, token)
                 .ok_or(VertexNotFound(id))?
-                .clone();
+                .clone_shared();
             let two = two.borrow_mut(token);
 
             // Removes the edge from the other vertex's edges
@@ -329,43 +329,42 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         // `id_one` and `id_two` - remains `None` if
         // there is no edge between them
         let mut edge_id = None;
-        {
-            let vertex_one = self
-                .vertices
-                .get(&id_one)
-                .ok_or(VertexNotFound(id_one))?
-                .borrow(token);
 
-            if let Some(vertex_two) = self.vertices.get(&id_two) {
-                let second = vertex_two.borrow(token);
-                for id in vertex_one.edges.keys() {
-                    if second.edges.contains_key(id) {
-                        edge_id = Some(*id);
-                        break;
-                    }
+        let vertex_one = self
+            .vertices
+            .get(&id_one)
+            .ok_or(VertexNotFound(id_one))?
+            .borrow(token);
+
+        if let Some(vertex_two) = self.vertices.get(&id_two) {
+            let second = vertex_two.borrow(token);
+            for id in vertex_one.edges.keys() {
+                if second.edges.contains_key(id) {
+                    edge_id = Some(*id);
+                    break;
                 }
-            } else {
-                return Err(VertexNotFound(id_two));
             }
+        } else {
+            return Err(VertexNotFound(id_two));
         }
 
-        if let Some(e_id) = edge_id {
+        if let Some(edge_id) = edge_id {
             // Actually remove the edges
             self.vertices
                 .get(&id_one)
                 .ok_or(VertexNotFound(id_one))?
                 .borrow_mut(token)
                 .edges
-                .remove(&e_id);
+                .remove(&edge_id);
 
             self.vertices
                 .get(&id_two)
                 .ok_or(VertexNotFound(id_two))?
                 .borrow_mut(token)
                 .edges
-                .remove(&e_id);
+                .remove(&edge_id);
 
-            let edge = self.edges.remove(&e_id).unwrap();
+            let edge = self.edges.remove(&edge_id).unwrap();
 
             // SAFETY: No pointers to the edge can exist any more
             unsafe { edge.drop() };

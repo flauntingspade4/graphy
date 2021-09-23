@@ -66,7 +66,7 @@ impl<'id, T> Shared<'id, T> {
     /// Clones self. Implemented as a method rather than
     /// a trait so users can't clone it, leading to possible
     /// use-after frees
-    pub(crate) const fn clone(&self) -> Self {
+    pub(crate) const fn clone_shared(&self) -> Self {
         Self(self.0)
     }
     /// Converts `Shared<T>` to `Shared<U>`.
