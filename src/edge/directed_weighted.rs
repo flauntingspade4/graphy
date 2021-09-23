@@ -40,6 +40,7 @@ impl<'id, Item, Weight> EdgeTrait<'id, Item, Weight> for DirectedWeightedEdge<'i
 
         Ok(())
     }
+
     fn other<'new_id>(
         &'new_id self,
         id: VertexId<'id>,

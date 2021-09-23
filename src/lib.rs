@@ -5,6 +5,7 @@
     option_result_unwrap_unchecked,
     allocator_api
 )]
+#![no_std]
 
 //! A simple and efficient graph-theory library written with a focus
 //! on error handling
