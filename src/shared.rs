@@ -69,6 +69,25 @@ impl<'id, T> Shared<'id, T> {
     pub(crate) const fn clone(&self) -> Self {
         Self(self.0)
     }
+    /// Converts `Shared<T>` to `Shared<U>`.
+    /// Will allocate for a new `Shared<U>`
+    pub fn convert<U>(self, token: &mut GhostToken<'id>) -> Shared<'id, U>
+    where
+        U: From<T>,
+    {
+        // SAFETY: The pointer will never be non-null,
+        // as it's from a `NonNull`.
+        // As this function takes a mutable reference to
+        // the token, it's guranteed to be the only writer/reader
+        // to the pointer itself
+        let ptr = unsafe { self.0.as_ptr().read() };
+
+        let inner = ptr.into_inner();
+
+        let converted_inner: U = inner.into();
+
+        Shared::new(converted_inner)
+    }
 }
 
 impl<'id, T> PartialEq for Shared<'id, T> {

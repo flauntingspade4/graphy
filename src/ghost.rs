@@ -71,6 +71,10 @@ impl<'id, T> GhostCell<'id, T> {
     pub fn get_mut(&mut self) -> &mut T {
         self.value.get_mut()
     }
+    /// Unwraps the value
+    pub fn into_inner(self) -> T {
+        self.value.into_inner()
+    }
     /// Immutably borrows the [`GhostCell`]'s contents,
     /// with the guarantee it's not being accessed mutably
     /// elsewhere by the fact the token must be immutably borrowed
