@@ -1,7 +1,7 @@
 use graph::{
     edge::{EdgeTrait, UnDirectedWeightedEdge},
     ghost::GhostToken,
-    Graph,
+    Graph, Node,
 };
 
 #[test]
@@ -51,13 +51,9 @@ fn add_edge() {
 
         let weight = 1.;
 
-        graph
-            .add_edge(first, second, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(first, second, weight, &mut t).unwrap();
 
-        graph
-            .add_edge(second, third, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(second, third, weight, &mut t).unwrap();
 
         assert_eq!(graph.get_vertex(first).unwrap().borrow(&t).edges().len(), 1);
         assert_eq!(
@@ -81,13 +77,9 @@ fn remove_edge_between() {
 
         let weight = 1.;
 
-        graph
-            .add_edge(first, second, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(first, second, weight, &mut t).unwrap();
 
-        graph
-            .add_edge(second, third, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(second, third, weight, &mut t).unwrap();
 
         graph.remove_edge_between(first, second, &mut t).unwrap();
 
@@ -113,13 +105,9 @@ fn remove() {
 
         let weight = 1.;
 
-        graph
-            .add_edge(first, second, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(first, second, weight, &mut t).unwrap();
 
-        graph
-            .add_edge(second, third, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(second, third, weight, &mut t).unwrap();
 
         graph.remove(second, &mut t).unwrap();
 
@@ -141,9 +129,7 @@ fn id_out_of_order() {
 
         let second = graph.add_vertex(());
 
-        graph
-            .add_edge(first, second, (), |_, _, _, _, _| weight, &mut t)
-            .unwrap();
+        graph.add_edge(first, second, weight, &mut t).unwrap();
 
         graph.remove(second, &mut t).unwrap();
 
@@ -163,9 +149,7 @@ fn adjacent() {
 
         let two = graph.add_vertex(());
 
-        graph
-            .add_edge(one, two, (), |_, _, _, _, _| 1., &mut f)
-            .unwrap();
+        graph.add_edge(one, two, 1., &mut f).unwrap();
 
         assert!(graph.adjacent(one, two, &f).unwrap());
     });
@@ -182,9 +166,7 @@ fn edges_mut() {
 
         let two = graph.add_vertex(());
 
-        graph
-            .add_edge(one, two, (), |_, _, _, _, _| x, &mut t)
-            .unwrap();
+        graph.add_edge(one, two, x, &mut t).unwrap();
 
         for (_, edge) in graph
             .get_vertex(one)
@@ -213,19 +195,14 @@ fn distance() {
 
         let two = graph.add_vertex((1., 0.));
 
-        graph
-            .add_edge(
-                one,
-                two,
-                (),
-                |_, a, b, _, token| {
-                    let a = a.g_borrow(token).get_item();
-                    let b = b.g_borrow(token).get_item();
-                    ((a.0 + b.0) * (a.0 + b.0) + (a.1 + b.1) * (a.1 + b.1)).sqrt()
-                },
-                &mut t,
-            )
-            .unwrap();
+        let weight = {
+            let a = graph.get_vertex(one).unwrap().borrow(&t).get_item();
+            let b = graph.get_vertex(two).unwrap().borrow(&t).get_item();
+
+            ((a.0 + b.0) * (a.0 + b.0) + (a.1 + b.1) * (a.1 + b.1)).sqrt()
+        };
+
+        graph.add_edge(one, two, weight, &mut t).unwrap();
 
         let distance = graph
             .get_vertex(one)
