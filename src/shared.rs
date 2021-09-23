@@ -81,6 +81,10 @@ impl<'id, T> Shared<'id, T> {
         // the token, it's guranteed to be the only writer/reader
         // to the pointer itself
         let ptr = unsafe { self.0.as_ptr().read() };
+        // SAFETY: Nothing else can be pointing to the old
+        // memory location, due to the mutable reference to
+        // the token
+        unsafe { self.drop() };
 
         let inner = ptr.into_inner();
 
