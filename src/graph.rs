@@ -66,6 +66,12 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         self.vertices.insert(id, Shared::new(vertex));
         id
     }
+    /// Adds all the vertices in the iterator provided
+    pub fn add_vertices(&mut self, vertices: impl Iterator<Item = Item>) {
+        vertices.for_each(|v| {
+            self.add_vertex(v);
+        });
+    }
     /// Adds an edge between the `id_one` and the `id_two`
     /// with the given weight
     ///
@@ -75,42 +81,31 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// If `id_one` is the same as `id_two`, or either
     /// id doesn't exist within the graph, a [`GraphError`] will
     /// be returned
-    pub fn add_edge<T>(
+    pub fn add_edge(
         &mut self,
         id_one: VertexId<'id>,
         id_two: VertexId<'id>,
-        item: T,
-        weight: impl for<'a> Fn(
-            T,
-            &'a Node<'id, Item, Weight, Edge>,
-            &'a Node<'id, Item, Weight, Edge>,
-            &'a mut Self,
-            &'a mut GhostToken<'id>,
-        ) -> Weight,
+        weight: Weight,
         token: &mut GhostToken<'id>,
     ) -> Result<EdgeId<'id>, GraphError<'id, Item, Weight, Edge>> {
-        use GraphError::{AlreadyEdgeBetween, IdenticalVertex, VertexNotFound};
-
         let id = self.new_edge_id();
 
         if id_one == id_two {
-            Err(IdenticalVertex(id_one))
+            Err(GraphError::IdenticalVertex(id_one))
         } else if self.adjacent(id_one, id_two, token)? {
-            Err(AlreadyEdgeBetween)
+            Err(GraphError::AlreadyEdgeBetween)
         } else {
             let first = self
                 .vertices
                 .get(&id_one)
-                .ok_or(VertexNotFound(id_one))?
+                .ok_or(GraphError::VertexNotFound(id_one))?
                 .clone();
 
             let second = self
                 .vertices
                 .get(&id_two)
-                .ok_or(VertexNotFound(id_two))?
+                .ok_or(GraphError::VertexNotFound(id_two))?
                 .clone();
-
-            let weight = weight(item, first.ghost(), second.ghost(), self, token);
 
             Edge::add_edge(weight, &first, &second, id, self, token)
                 .map_err(GraphError::AddEdgeError)?;
@@ -191,7 +186,6 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
             }
         }
     }
-
     /// Empties self
     pub fn clear(&mut self) {
         self.vertices.drain().for_each(|(_, s)| unsafe { s.drop() });
@@ -211,7 +205,6 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn edge_len(&self) -> usize {
         self.edge_len
     }
-
     /// If there are no [vertices](Vertex) in the graph
     #[must_use]
     pub fn is_empty(&self) -> bool {
@@ -236,6 +229,11 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn get_vertex(&self, id: VertexId<'id>) -> Option<&SharedNode<'id, Item, Weight, Edge>> {
         self.vertices.get(&id)
     }
+    /// Returns an iterator over all of the [`VertexId`]s in the
+    /// graph
+    pub fn get_all_vertices(&self) -> impl Iterator<Item = &VertexId<'id>> {
+        self.vertices.keys()
+    }
     /// Attempts to get a vertex using a given [`VertexId`]
     /// # Errors
     /// Returns `None` if `id` does not exist within the graph
@@ -243,7 +241,6 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn get_edge(&self, id: EdgeId<'id>) -> Option<&Shared<'id, Edge>> {
         self.edges.get(&id)
     }
-
     /// Returns an immutable iterator over the
     /// graph's nodes
     #[must_use]
@@ -270,8 +267,6 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         token: &mut GhostToken<'id>,
     ) -> Result<(), GraphError<'id, Item, Weight, Edge>> {
         use GraphError::{EdgeNotFound, VertexNotFound};
-
-        self.vertex_len -= 1;
 
         let to_remove = self.vertices.remove(&id).ok_or(VertexNotFound(id))?;
 
@@ -309,6 +304,8 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         }
 
         unsafe { to_remove.drop() }
+
+        self.vertex_len -= 1;
 
         Ok(())
     }
