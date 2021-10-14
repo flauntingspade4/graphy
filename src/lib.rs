@@ -37,8 +37,8 @@ mod id;
 mod shared;
 mod vertex;
 
-pub use crate::graph::Graph;
 use edge::EdgeTrait;
+pub use graph::Graph;
 pub use id::{EdgeId, VertexId};
 pub use shared::Shared;
 pub use vertex::Vertex;
