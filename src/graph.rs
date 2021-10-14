@@ -77,6 +77,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     ///
     /// The internal edge count will still be incremented,
     /// even if the method fails
+    /// 
     /// # Errors
     /// If `id_one` is the same as `id_two`, or either
     /// id doesn't exist within the graph, a [`GraphError`] will
@@ -121,11 +122,9 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     /// is returned
     ///
     /// # Errors
-    /// If `id_one` is the same as `id_two`,
-    /// [`GraphError::IdenticalVertex`] is returned,
-    /// or if either id doesn't have a vertex
-    /// within the graph, an [`GraphError::VertexNotFound`]
-    /// will be returned
+    /// If `id_one` is the same as `id_two`, or either
+    /// id doesn't exist within the graph, a [`GraphError`] will
+    /// be returned
     pub fn create_or_update_edge_between<T>(
         &mut self,
         id_one: VertexId<'id>,
@@ -190,7 +189,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn clear(&mut self) {
         *self = Self::new();
     }
-    /// The number of [vertices](Vertex) in the graph
+    /// The number of [`vertices`](Vertex) in the graph
     #[must_use]
     pub fn vertex_len(&self) -> usize {
         self.vertex_len
@@ -200,7 +199,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     pub fn edge_len(&self) -> usize {
         self.edge_len
     }
-    /// If there are no [vertices](Vertex) in the graph
+    /// If there are no [`vertices`](Vertex) in the graph
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.vertex_len == 0
@@ -243,14 +242,6 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
         &self,
     ) -> hashbrown::hash_map::Iter<'_, VertexId<'id>, SharedNode<'id, Item, Weight, Edge>> {
         self.vertices.iter()
-    }
-    /// Returns an mutable iterator over the
-    /// graph's nodes
-    #[must_use]
-    pub fn vertices_mut(
-        &mut self,
-    ) -> hashbrown::hash_map::IterMut<'_, VertexId<'id>, SharedNode<'id, Item, Weight, Edge>> {
-        self.vertices.iter_mut()
     }
     /// Attempts to remove a [`Vertex`] from the graph, removing all edges to and
     /// from the [`Vertex`]
