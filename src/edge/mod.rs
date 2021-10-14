@@ -6,10 +6,12 @@ mod undirected_weighted;
 use crate::{ghost::GhostToken, id::EdgeId, Graph, SharedNode, VertexId};
 
 pub use directed_weighted::DirectedWeightedEdge;
+
+pub use undirected_weighted::UnDirectedWeightedEdge;
+
 /// An undirected edge between two [vertices](crate::Vertex) with
 /// no weight
 pub type UnDirectedUnWeightedEdge<'id, Item> = UnDirectedWeightedEdge<'id, Item, ()>;
-pub use undirected_weighted::UnDirectedWeightedEdge;
 
 /// A graph can add edges between [`Vertices`](crate::Vertex) of any
 /// type that implements [`EdgeTrait`]
@@ -18,6 +20,7 @@ pub trait EdgeTrait<'id, Item, Weight>: Sized {
 
     /// Adds an edge between `first`, `second`
     /// and the graph, with the given weight
+    ///
     /// # Errors
     /// Returns [`Self::Error`] if adding an edge
     /// fails
@@ -30,6 +33,7 @@ pub trait EdgeTrait<'id, Item, Weight>: Sized {
         token: &'new_id mut GhostToken<'id>,
     ) -> Result<(), Self::Error>;
     /// Returns the other [`Vertex`](crate::Vertex) in `self`
+    ///
     /// # Errors
     /// Returns `None` if the provided [`VertexId`] doesn't
     /// relate to either [`Vertex`](crate::Vertex) in `self`

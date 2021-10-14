@@ -188,12 +188,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     }
     /// Empties self
     pub fn clear(&mut self) {
-        self.vertices.drain().for_each(|(_, s)| unsafe { s.drop() });
-        self.edges.drain().for_each(|(_, s)| unsafe { s.drop() });
-        self.current_vertex_id = 0;
-        self.current_edge_id = 0;
-        self.vertex_len = 0;
-        self.edge_len = 0;
+        self = &mut Self::new();
     }
     /// The number of [vertices](Vertex) in the graph
     #[must_use]
