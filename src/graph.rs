@@ -188,7 +188,7 @@ impl<'id, Item, Weight, Edge: EdgeTrait<'id, Item, Weight>> Graph<'id, Item, Wei
     }
     /// Empties self
     pub fn clear(&mut self) {
-        self = &mut Self::new();
+        *self = Self::new();
     }
     /// The number of [vertices](Vertex) in the graph
     #[must_use]

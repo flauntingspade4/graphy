@@ -37,12 +37,12 @@ impl<'id, T> Shared<'id, T> {
     }
     /// A shorthand for `shared.ghost().g_borrow(&token)`
     #[must_use]
-    pub fn borrow<'a>(&self, token: &'a GhostToken<'id>) -> &'a T {
-        unsafe { self.0.as_ref() }.g_borrow(token)
+    pub fn borrow<'a>(&'a self, token: &'a GhostToken<'id>) -> &'a T {
+        self.ghost().g_borrow(token)
     }
     /// A shorthand for `shared.ghost().g_borrow_mut(&mut token)`
-    pub fn borrow_mut<'a>(&self, token: &'a mut GhostToken<'id>) -> &'a mut T {
-        unsafe { self.0.as_ref() }.g_borrow_mut(token)
+    pub fn borrow_mut<'a>(&'a self, token: &'a mut GhostToken<'id>) -> &'a mut T {
+        self.ghost().g_borrow_mut(token)
     }
     /// Drops the contents of `self`
     ///
@@ -71,7 +71,7 @@ impl<'id, T> Shared<'id, T> {
     }
     /// Converts `Shared<T>` to `Shared<U>`.
     /// Will allocate for a new `Shared<U>`
-    pub fn convert<U>(self, token: &mut GhostToken<'id>) -> Shared<'id, U>
+    pub fn convert<U>(self, _token: &mut GhostToken<'id>) -> Shared<'id, U>
     where
         U: From<T>,
     {
